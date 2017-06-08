@@ -145,7 +145,12 @@ int main(int argc, char **argv)
 	SnapCam cam(cfg);
 	cam.setListener(imageCallback);
 
-	ros::spin();
+        while(nh.ok()) {
+            if(cam.isAvailable()) {
+                cam.takePicture();
+            }
+	    ros::spinOnce();
+        }
 
 	return 0;
 }

@@ -45,6 +45,7 @@
 #include <opencv2/opencv.hpp>
 #include <math.h>
 #include <typeinfo>
+#include <iostream>
 
 #include "camera.h"
 #include "camera_log.h"
@@ -164,6 +165,11 @@ public:
 	/* listener methods */
 	virtual void onError();
 	virtual void onVideoFrame(ICameraFrame *frame);
+
+        /* Self-defined functions */
+        virtual void onPictureFrame(ICameraFrame *frame);
+        int isAvailable();
+        void takePicture();
 
 private:
 	int initialize(CamConfig cfg);

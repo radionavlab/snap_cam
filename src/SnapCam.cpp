@@ -203,7 +203,7 @@ int SnapCam::initialize(CamConfig cfg)
 		printCapabilities();
 
 	} else {
-		camera_->startRecording();
+		// camera_->startRecording();
 	}
 
 	config_ = cfg;
@@ -227,6 +227,57 @@ void SnapCam::onError()
 {
 	printf("camera error!, aborting\n");
 	exit(EXIT_FAILURE);
+}
+
+void SnapCam::onPictureFrame(ICameraFrame *frame) {
+
+        std::cout << "Taking picture." << std::endl;
+
+	uint64_t time_stamp = get_absolute_time();
+
+	if (!cb_) {
+		return;        // as long as nobody is listening, we don't need to do anything
+	}
+
+	int frame_height = pSize_.height;
+	int frame_width = pSize_.width;
+
+	cv::Mat matFrame;
+
+	if (config_.func == 0) { //highres
+		cv::Mat mYUV = cv::Mat(1.5 * frame_height, frame_width, CV_8UC1, frame->data);
+		cv::cvtColor(mYUV, matFrame, CV_YUV420sp2RGB);
+                cv::transpose(matFrame, matFrame);
+                cv::flip(matFrame, matFrame, 1);
+		mYUV.release();
+
+	} else { //optical flow
+		matFrame = cv::Mat(frame_height, frame_width, CV_8UC1, frame->data);
+	}
+
+	if (auto_exposure_) {
+		updateExposure(matFrame);
+	}
+
+	cb_(matFrame, time_stamp);
+	matFrame.release();
+}
+
+int SnapCam::isAvailable() {
+        static uint64_t lastTime = 0;
+        struct timeval tp;
+        gettimeofday(&tp, NULL);
+        uint64_t currentTime = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+
+        if(currentTime - lastTime > 1000) {
+            lastTime = currentTime;
+            return 1;
+        }
+        return 0;
+}
+
+void SnapCam::takePicture() {
+      this->camera_->takePicture(); 
 }
 
 /**
