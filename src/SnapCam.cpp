@@ -212,7 +212,7 @@ int SnapCam::initialize(CamConfig cfg)
 SnapCam::~SnapCam()
 {
 	camera_->stopPreview();
-	camera_->stopRecording();
+	// camera_->stopRecording();
 
 	/* release camera device */
 	ICameraDevice::deleteInstance(&camera_);
@@ -230,9 +230,6 @@ void SnapCam::onError()
 }
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {
-
-        std::cout << "Taking picture." << std::endl;
-
 	uint64_t time_stamp = get_absolute_time();
 
 	if (!cb_) {
@@ -242,18 +239,21 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
 	int frame_height = pSize_.height;
 	int frame_width = pSize_.width;
 
-	cv::Mat matFrame;
+    	// Write a jpeg file
+    	std::string path = "/home/linaro/ws/src/snap_cam/image.jpeg";
+    	FILE *file = fopen(path.c_str(), "w+");
+    	fwrite(frame->data, sizeof(char), frame->size, file);
+    	fclose(file);
 
+	cv::Mat matFrame;
+	matFrame = cv::imread(path, CV_LOAD_IMAGE_COLOR);
+
+	// Rotate the highres image 90 degrees clockwise
 	if (config_.func == 0) { //highres
-		cv::Mat mYUV = cv::Mat(1.5 * frame_height, frame_width, CV_8UC1, frame->data);
-		cv::cvtColor(mYUV, matFrame, CV_YUV420sp2RGB);
                 cv::transpose(matFrame, matFrame);
                 cv::flip(matFrame, matFrame, 1);
-		mYUV.release();
-
-	} else { //optical flow
-		matFrame = cv::Mat(frame_height, frame_width, CV_8UC1, frame->data);
 	}
+
 
 	if (auto_exposure_) {
 		updateExposure(matFrame);
