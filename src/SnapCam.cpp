@@ -43,6 +43,7 @@ using namespace camera;
 
 static CamConfig parseCommandline(int argc, char *argv[]);
 static uint64_t get_absolute_time();
+std::mutex SnapCam::mtx;
 
 SnapCam::SnapCam(CamConfig cfg)
 	: cb_(nullptr),
@@ -182,6 +183,7 @@ int SnapCam::initialize(CamConfig cfg)
 	params_.setVideoSize(pSize_);
 	params_.setPreviewFormat(caps_.previewFormats[0]); //0:yuv420sp 1:yuv420p 2:nv12-venus 3:bayer-rggb
 	params_.setPreviewSize(pSize_);
+	params_.setPictureSize(pSize_);
 	params_.setPreviewFpsRange(caps_.previewFpsRanges[pFpsIdx]);
 
 	rc = params_.commit();
@@ -230,14 +232,12 @@ void SnapCam::onError()
 }
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {
+
 	uint64_t time_stamp = get_absolute_time();
 
 	if (!cb_) {
 		return;        // as long as nobody is listening, we don't need to do anything
 	}
-
-	int frame_height = pSize_.height;
-	int frame_width = pSize_.width;
 
     	// Write a jpeg file
     	std::string path = "/home/linaro/ws/src/snap_cam/image.jpeg";
@@ -250,8 +250,8 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
 
 	// Rotate the highres image 90 degrees clockwise
 	if (config_.func == 0) { //highres
-                cv::transpose(matFrame, matFrame);
-                cv::flip(matFrame, matFrame, 1);
+        	cv::transpose(matFrame, matFrame);
+        	cv::flip(matFrame, matFrame, 1);
 	}
 
 
@@ -261,19 +261,12 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
 
 	cb_(matFrame, time_stamp);
 	matFrame.release();
+	SnapCam::mtx.unlock();
 }
 
 int SnapCam::isAvailable() {
-        static uint64_t lastTime = 0;
-        struct timeval tp;
-        gettimeofday(&tp, NULL);
-        uint64_t currentTime = tp.tv_sec * 1000 + tp.tv_usec / 1000;
-
-        if(currentTime - lastTime > 1000) {
-            lastTime = currentTime;
-            return 1;
-        }
-        return 0;
+	SnapCam::mtx.lock();
+	return 1;
 }
 
 void SnapCam::takePicture() {

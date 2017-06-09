@@ -34,6 +34,7 @@
 #include <cstring>
 #include <functional>
 #include <string>
+#include <mutex>
 
 #include <unistd.h>
 #include <pthread.h>
@@ -204,6 +205,7 @@ private:
 	void updateExposure(cv::Mat &frame);
 
 	CallbackFunction cb_;
+	static std::mutex mtx;
 };
 
 #endif // _SNAP_CAM_
