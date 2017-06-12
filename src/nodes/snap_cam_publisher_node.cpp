@@ -146,9 +146,7 @@ int main(int argc, char **argv)
 	cam.setListener(imageCallback);
 
         while(nh.ok()) {
-            if(cam.isAvailable()) {
-                cam.takePicture();
-            }
+            cam.takePicture();
 	    ros::spinOnce();
         }
 

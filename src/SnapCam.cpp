@@ -43,7 +43,6 @@ using namespace camera;
 
 static CamConfig parseCommandline(int argc, char *argv[]);
 static uint64_t get_absolute_time();
-std::mutex SnapCam::mtx;
 
 SnapCam::SnapCam(CamConfig cfg)
 	: cb_(nullptr),
@@ -209,6 +208,7 @@ int SnapCam::initialize(CamConfig cfg)
 	}
 
 	config_ = cfg;
+
 }
 
 SnapCam::~SnapCam()
@@ -233,20 +233,21 @@ void SnapCam::onError()
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {
 
+	std::cout << "Processing Picture." << std::endl;
+	pthread_mutex_lock(&mutexPicDone);
+
 	uint64_t time_stamp = get_absolute_time();
 
 	if (!cb_) {
 		return;        // as long as nobody is listening, we don't need to do anything
 	}
 
-    	// Write a jpeg file
-    	std::string path = "/home/linaro/ws/src/snap_cam/image.jpeg";
-    	FILE *file = fopen(path.c_str(), "w+");
-    	fwrite(frame->data, sizeof(char), frame->size, file);
-    	fclose(file);
-
 	cv::Mat matFrame;
-	matFrame = cv::imread(path, CV_LOAD_IMAGE_COLOR);
+	cv::Mat rawData;
+	int frame_height = pSize_.height;
+	int frame_width = pSize_.width;
+	rawData = cv::Mat(1, frame->size, CV_8UC1, frame->data);
+	matFrame  =  imdecode( rawData, CV_LOAD_IMAGE_COLOR );
 
 	// Rotate the highres image 90 degrees clockwise
 	if (config_.func == 0) { //highres
@@ -254,23 +255,29 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
         	cv::flip(matFrame, matFrame, 1);
 	}
 
-
 	if (auto_exposure_) {
 		updateExposure(matFrame);
 	}
 
 	cb_(matFrame, time_stamp);
-	matFrame.release();
-	SnapCam::mtx.unlock();
-}
-
-int SnapCam::isAvailable() {
-	SnapCam::mtx.lock();
-	return 1;
+	matFrame.release();	
+	
+	std::cout << "\nReleasing picture." << std::endl;
+	isPicDone=true;
+	pthread_mutex_unlock(&mutexPicDone);
+	pthread_cond_signal(&cvPicDone);
 }
 
 void SnapCam::takePicture() {
-      this->camera_->takePicture(); 
+	pthread_mutex_lock(&mutexPicDone);
+	while(!isPicDone){
+    		pthread_cond_wait(&cvPicDone, &mutexPicDone);
+	}
+	pthread_mutex_unlock(&mutexPicDone);
+	isPicDone=false;
+
+	std::cout << "Taking picture." << std::endl;
+        this->camera_->takePicture();
 }
 
 /**

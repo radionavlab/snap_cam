@@ -169,7 +169,6 @@ public:
 
         /* Self-defined functions */
         virtual void onPictureFrame(ICameraFrame *frame);
-        int isAvailable();
         void takePicture();
 
 private:
@@ -186,9 +185,9 @@ private:
 
 	uint64_t vTimeStampPrev_, pTimeStampPrev_;
 
-	pthread_cond_t cvPicDone;
-	pthread_mutex_t mutexPicDone;
-	bool isPicDone;
+	pthread_cond_t cvPicDone=PTHREAD_COND_INITIALIZER;
+	pthread_mutex_t mutexPicDone=PTHREAD_MUTEX_INITIALIZER;
+	bool isPicDone=true;
 
 	bool auto_exposure_;
 
