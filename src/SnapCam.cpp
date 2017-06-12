@@ -233,7 +233,6 @@ void SnapCam::onError()
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {
 
-	std::cout << "Processing Picture." << std::endl;
 	pthread_mutex_lock(&mutexPicDone);
 
 	uint64_t time_stamp = get_absolute_time();
@@ -262,7 +261,6 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
 	cb_(matFrame, time_stamp);
 	matFrame.release();	
 	
-	std::cout << "\nReleasing picture." << std::endl;
 	isPicDone=true;
 	pthread_mutex_unlock(&mutexPicDone);
 	pthread_cond_signal(&cvPicDone);
@@ -276,7 +274,6 @@ void SnapCam::takePicture() {
 	pthread_mutex_unlock(&mutexPicDone);
 	isPicDone=false;
 
-	std::cout << "Taking picture." << std::endl;
         this->camera_->takePicture();
 }
 
