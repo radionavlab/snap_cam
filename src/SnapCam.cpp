@@ -48,6 +48,10 @@ SnapCam::SnapCam(CamConfig cfg)
 	: cb_(nullptr),
 	auto_exposure_(false)
 {
+	isPicDone=true;
+	pthread_mutex_init(&mutexPicDone, 0);
+    	pthread_cond_init(&cvPicDone, 0);
+
 	initialize(cfg);
 }
 
@@ -233,53 +237,57 @@ void SnapCam::onError()
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {
 
-	pthread_mutex_lock(&mutexPicDone);
+	// frame->acquireRef();
 
-	uint64_t time_stamp = get_absolute_time();
+	// No need to send the image anywhere
+	if (!cb_) { return; }
 
-	if (!cb_) {
-		return;        // as long as nobody is listening, we don't need to do anything
-	}
+	unsigned char* rawData = new unsigned char[frame->size];
+ 	memcpy(rawData, frame->data, frame->size);
 
-	cv::Mat matFrame;
-	cv::Mat rawData;
-	int frame_height = pSize_.height;
-	int frame_width = pSize_.width;
-	rawData = cv::Mat(1, frame->size, CV_8UC1, frame->data);
-	matFrame  =  imdecode( rawData, CV_LOAD_IMAGE_COLOR );
+	frame->releaseRef();
+
+	cv::Mat encodedImg = cv::Mat(1, frame->size, CV_8UC1, frame->data);
+	cv::Mat decodedImg = cv::imdecode(encodedImg, CV_LOAD_IMAGE_COLOR);
 
 	// Rotate the highres image 90 degrees clockwise
-	if (config_.func == 0) { //highres
-        	cv::transpose(matFrame, matFrame);
-        	cv::flip(matFrame, matFrame, 1);
+	if (config_.func == 0) {
+        	cv::transpose(decodedImg, decodedImg);
+        	cv::flip(decodedImg, decodedImg, 1);
 	}
 
 	if (auto_exposure_) {
-		updateExposure(matFrame);
+		updateExposure(decodedImg);
 	}
-
-	cb_(matFrame, time_stamp);
-	matFrame.release();	
 	
+	uint64_t time_stamp = get_absolute_time();
+	cb_(decodedImg, time_stamp);
+
+	encodedImg.release();
+	decodedImg.release();
+	delete[] rawData;
+
+	pthread_mutex_lock(&mutexPicDone);
 	isPicDone=true;
-	pthread_mutex_unlock(&mutexPicDone);
 	pthread_cond_signal(&cvPicDone);
+	pthread_mutex_unlock(&mutexPicDone);
 }
 
 void SnapCam::takePicture() {
 	pthread_mutex_lock(&mutexPicDone);
-	while(!isPicDone){
+	while(isPicDone == false){
     		pthread_cond_wait(&cvPicDone, &mutexPicDone);
 	}
-	pthread_mutex_unlock(&mutexPicDone);
 	isPicDone=false;
+	pthread_mutex_unlock(&mutexPicDone);
 
+	usleep(100000);
         this->camera_->takePicture();
 }
 
 /**
  *
- * FUNCTION: onPreviewFrame
+ * FUNCTION: onVideoFrame
  *
  *  - This is called every frame I
  *  - In parameter frame (ICameraFrame) also has the timestamps

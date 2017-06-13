@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(snap_cam)
-
+set(CMAKE_BUILD_TYPE Debug)
 # check if this is being built as a ROS package
 if (CATKIN_DEVEL_PREFIX)
     set(CATKIN_BUILD 1)

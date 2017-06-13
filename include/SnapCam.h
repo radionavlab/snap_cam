@@ -185,9 +185,9 @@ private:
 
 	uint64_t vTimeStampPrev_, pTimeStampPrev_;
 
-	pthread_cond_t cvPicDone=PTHREAD_COND_INITIALIZER;
-	pthread_mutex_t mutexPicDone=PTHREAD_MUTEX_INITIALIZER;
-	bool isPicDone=true;
+	pthread_cond_t cvPicDone;
+	pthread_mutex_t mutexPicDone;
+	bool isPicDone;
 
 	bool auto_exposure_;
 

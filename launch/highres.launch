@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <arg name="resolution" default="VGA"/>
+  <arg name="resolution" default="1080p"/>
   <arg name="fps" default="0"/>
   <arg name="exposure" default="100"/>
   <arg name="gain" default="50"/>
@@ -9,7 +9,6 @@
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" launch-prefix="/home/linaro/ws/src/snap_cam/launch/run_tmux" >
 -->
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen">
-
     <!--
     "optflow" or "highres" -->
     <param name="camera_type" value="highres"/>
