@@ -18,51 +18,40 @@
 #include <opencv2/core/core.hpp>
 #include <opencv2/opencv.hpp>
 #include <typeinfo>
+#include <vector>
 
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
+#include <sensor_msgs/CompressedImage.h>
 #include <image_transport/image_transport.h>
 
 #include "SnapCam.h"
 
-image_transport::Publisher image_pub;
+ros::Publisher image_pub;
 
+void imageCallback(unsigned char *buffer, int size) {
+        static int count = 0;
+ 
+        std::vector<uint8_t> data(buffer, buffer + size);
+        sensor_msgs::CompressedImage msg;
 
-void imageCallback(const cv::Mat &img, uint64_t time_stamp)
-{
-	// convert OpenCV image to ROS message
-	cv_bridge::CvImage cvi;
-	cvi.header.stamp = ros::Time::now();
-	cvi.header.frame_id = "image";
-	cvi.image = img;
+        msg.header.stamp=ros::Time::now();
+        msg.header.frame_id="image";
+        msg.format="jpeg";
+        msg.data = data;
 
-	if (img.channels() == 1) { // optical flow
-		cvi.encoding = "mono8";
+	image_pub.publish(msg);
 
-	} else { // highres
-		cvi.encoding = "bgr8";
-	}
-
-	sensor_msgs::Image im;
-	cvi.toImageMsg(im);
-	image_pub.publish(im);
+        count++;
 }
 
 int main(int argc, char **argv)
 {
-	ros::init(argc, argv, "snap_cam_publisher");
+	ros::init(argc, argv, "snap_cam_highres/publisher");
 	ros::NodeHandle nh("~");
 	image_transport::ImageTransport it(nh);
-
-	std::string topic_name;
-
-	if (!nh.getParam("topic_name", topic_name)) {
-		topic_name = "image";
-		ROS_WARN("No topic name parameter provided. Defaulting to: %s.", topic_name.c_str());
-	}
-
-	image_pub = it.advertise(topic_name.c_str(), 1);
+        image_pub = nh.advertise<sensor_msgs::CompressedImage>("image_raw/compressed", 1);
 
 	std::string res;
 
@@ -83,20 +72,6 @@ int main(int argc, char **argv)
 	if (!nh.getParam("camera_fps_idx", camera_fps_idx)) {
 		camera_fps_idx = 0;
 		ROS_WARN("No camera fps idx parameter provided. Defaulting to %d.", camera_fps_idx);
-	}
-
-	int exposure;
-
-	if (!nh.getParam("exposure", exposure)) {
-		exposure = 100;
-		ROS_WARN("No exposure parameter provided. Defaulting to %d.", exposure);
-	}
-
-	int camera_gain;
-
-	if (!nh.getParam("gain", camera_gain)) {
-		camera_gain = 50;
-		ROS_WARN("No gain parameter provided. Defaulting to %d.", camera_gain);
 	}
 
 	CamConfig cfg;
@@ -139,8 +114,6 @@ int main(int argc, char **argv)
 	}
 
 	cfg.fps = camera_fps_idx;
-	cfg.exposureValue = exposure;
-	cfg.gainValue = camera_gain;
 
 	SnapCam cam(cfg);
 	cam.setListener(imageCallback);

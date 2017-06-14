@@ -134,15 +134,6 @@ int SnapCam::initialize(CamConfig cfg)
 
 	pSize_ = cfg.pSize;
 
-
-	frameCounter = 0;
-
-	//set parameters
-	int focusModeIdx = 0; //fixed
-	int wbModeIdx =
-		0; //whitebalance 0: auto 1: incandescent 2: fluorescent 3: warm-fluorescent 4: daylight 5: cloudy-daylight 6: twilight 7: shade 8: manual-cct
-	int isoModeIdx = 7; // High ISO
-
 	rc = setFPSindex(cfg.fps, pFpsIdx, vFpsIdx);
 
 	if ( rc == -1)
@@ -151,10 +142,19 @@ int SnapCam::initialize(CamConfig cfg)
 		return rc;
 	}
 
-	params_.setFocusMode(caps_.focusModes[focusModeIdx]);
-	params_.setWhiteBalance(caps_.wbModes[wbModeIdx]);
-	params_.setISO(caps_.isoModes[isoModeIdx]);
-	params_.setPreviewFormat(caps_.previewFormats[0]); //0:yuv420sp 1:yuv420p 2:nv12-venus 3:bayer-rggb
+        /* auto, infinity, macro, continuous-video, continuous-picture, manual */
+	params_.setFocusMode("continuous-picture");
+
+        /* auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct */
+	params_.setWhiteBalance("fluorescent");
+
+        /* auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 */
+	params_.setISO("ISO3200");
+
+        /* yuv420sp, yuv420p, nv12-venus, bayer-rggb */
+	params_.setPreviewFormat("yuv420sp");
+
+
 	params_.setPreviewSize(pSize_);
 	params_.setPictureSize(pSize_);
 	params_.setPreviewFpsRange(caps_.previewFpsRanges[pFpsIdx]);
@@ -166,19 +166,6 @@ int SnapCam::initialize(CamConfig cfg)
 	}
 
 	camera_->startPreview();
-
-/*
-	params_.setManualExposure(cfg.exposureValue);
-	params_.setManualGain(cfg.gainValue);
-	printf("Setting exposure value =  %d , gain value = %d \n", cfg.exposureValue, cfg.gainValue );
-
-	rc = params_.commit();
-
-	if (rc) {
-		printf("Commit failed\n");
-
-	}
-*/
 	config_ = cfg;
 
 }
@@ -191,11 +178,6 @@ SnapCam::~SnapCam()
 	ICameraDevice::deleteInstance(&camera_);
 }
 
-static inline uint32_t align_size(uint32_t size, uint32_t align)
-{
-	return ((size + align - 1) & ~(align - 1));
-}
-
 void SnapCam::onError()
 {
 	printf("camera error!, aborting\n");
@@ -204,35 +186,10 @@ void SnapCam::onError()
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {
 
-	// frame->acquireRef();
-
 	// No need to send the image anywhere
 	if (!cb_) { return; }
 
-	unsigned char* rawData = new unsigned char[frame->size];
- 	memcpy(rawData, frame->data, frame->size);
-
-	frame->releaseRef();
-
-	cv::Mat encodedImg = cv::Mat(1, frame->size, CV_8UC1, frame->data);
-	cv::Mat decodedImg = cv::imdecode(encodedImg, CV_LOAD_IMAGE_COLOR);
-
-	// Rotate the highres image 90 degrees clockwise
-	// if (config_.func == 0) {
-        // 	cv::transpose(decodedImg, decodedImg);
-        // 	cv::flip(decodedImg, decodedImg, 1);
-	// }
-
-	if (auto_exposure_) {
-		updateExposure(decodedImg);
-	}
-	
-	uint64_t time_stamp = get_absolute_time();
-	cb_(decodedImg, time_stamp);
-
-	encodedImg.release();
-	decodedImg.release();
-	delete[] rawData;
+	cb_(frame->data, frame->size);
 
 	pthread_mutex_lock(&mutexPicDone);
 	isPicDone=true;

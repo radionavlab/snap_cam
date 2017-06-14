@@ -141,7 +141,7 @@ struct CamConfig {
 };
 
 // Callback function.
-typedef std::function<void(const cv::Mat &, uint64_t time_stamp)> CallbackFunction;
+typedef std::function<void(unsigned char *buffer, int size)> CallbackFunction;
 
 /**
  * CLASS  SnapCam

@@ -66,13 +66,13 @@ if (camera_LIBRARIES)
       ${camera_LIBRARIES}
     )
 
-    add_executable(optical_flow src/optical_flow.cpp src/ringbuffer.cpp)
-    target_link_libraries(optical_flow yaml-cpp
-        ${catkin_LIBRARIES}
-        ${OpenCV_LIBS}
-        snap_cam
-        ${OpticalFlow_LIBS}
-    )
+    # add_executable(optical_flow src/optical_flow.cpp src/ringbuffer.cpp)
+    # target_link_libraries(optical_flow yaml-cpp
+    #     ${catkin_LIBRARIES}
+    #     ${OpenCV_LIBS}
+    #     snap_cam
+    #     ${OpticalFlow_LIBS}
+    # )
 endif()
 
 # add the ROS executables
