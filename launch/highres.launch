@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <arg name="resolution" default="1080p"/>
+  <arg name="resolution" default="720p"/>
   <arg name="fps" default="0"/>
   <arg name="exposure" default="100"/>
   <arg name="gain" default="50"/>

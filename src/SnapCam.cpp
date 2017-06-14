@@ -169,7 +169,7 @@ int SnapCam::initialize(CamConfig cfg)
 	int focusModeIdx = 0; //fixed
 	int wbModeIdx =
 		0; //whitebalance 0: auto 1: incandescent 2: fluorescent 3: warm-fluorescent 4: daylight 5: cloudy-daylight 6: twilight 7: shade 8: manual-cct
-	int isoModeIdx = 0; //auto
+	int isoModeIdx = 7; // High ISO
 
 	rc = setFPSindex(cfg.fps, pFpsIdx, vFpsIdx);
 
@@ -251,10 +251,10 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
 	cv::Mat decodedImg = cv::imdecode(encodedImg, CV_LOAD_IMAGE_COLOR);
 
 	// Rotate the highres image 90 degrees clockwise
-	if (config_.func == 0) {
-        	cv::transpose(decodedImg, decodedImg);
-        	cv::flip(decodedImg, decodedImg, 1);
-	}
+	// if (config_.func == 0) {
+        // 	cv::transpose(decodedImg, decodedImg);
+        // 	cv::flip(decodedImg, decodedImg, 1);
+	// }
 
 	if (auto_exposure_) {
 		updateExposure(decodedImg);
