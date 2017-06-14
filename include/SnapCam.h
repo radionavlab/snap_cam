@@ -154,8 +154,6 @@ class SnapCam : ICameraListener
 public:
 
 	SnapCam(CamConfig cfg);
-	SnapCam(int argc, char *argv[]);
-	SnapCam(std::string config_str);
 	~SnapCam();
 
 	void setListener(CallbackFunction fun);  // register a function callback
@@ -165,10 +163,8 @@ public:
 
 	/* listener methods */
 	virtual void onError();
-	virtual void onVideoFrame(ICameraFrame *frame);
-
-        /* Self-defined functions */
         virtual void onPictureFrame(ICameraFrame *frame);
+
         void takePicture();
 
 private:
@@ -204,7 +200,6 @@ private:
 	void updateExposure(cv::Mat &frame);
 
 	CallbackFunction cb_;
-	static std::mutex mtx;
 };
 
 #endif // _SNAP_CAM_

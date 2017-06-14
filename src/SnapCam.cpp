@@ -41,7 +41,6 @@
 using namespace std;
 using namespace camera;
 
-static CamConfig parseCommandline(int argc, char *argv[]);
 static uint64_t get_absolute_time();
 
 SnapCam::SnapCam(CamConfig cfg)
@@ -53,34 +52,6 @@ SnapCam::SnapCam(CamConfig cfg)
     	pthread_cond_init(&cvPicDone, 0);
 
 	initialize(cfg);
-}
-
-SnapCam::SnapCam(int argc, char *argv[])
-	: cb_(nullptr),
-	auto_exposure_(false)
-{
-	initialize(parseCommandline(argc, argv));
-}
-
-SnapCam::SnapCam(std::string config_str)
-	: cb_(nullptr),
-	auto_exposure_(false)
-{
-	std::vector<char *> args;
-	std::istringstream iss(config_str);
-
-	std::string token;
-
-	while (iss >> token) {
-		char *arg = new char[token.size() + 1];
-		copy(token.begin(), token.end(), arg);
-		arg[token.size()] = '\0';
-		args.push_back(arg);
-	}
-
-	args.push_back(0);
-
-	initialize(parseCommandline(args.size(), &args[0]));
 }
 
 int SnapCam::findCamera(CamConfig cfg, int32_t &camera_id)
@@ -156,6 +127,7 @@ int SnapCam::initialize(CamConfig cfg)
 	caps_.videoFpsValues = params_.getSupportedVideoFps();
 	caps_.previewFormats = params_.getSupportedPreviewFormats();
 	caps_.rawSize = params_.get("raw-size");
+	printCapabilities();
 
 	int pFpsIdx;
 	int vFpsIdx;
@@ -179,11 +151,9 @@ int SnapCam::initialize(CamConfig cfg)
 		return rc;
 	}
 
-	params_.setVideoFPS(caps_.videoFpsValues[vFpsIdx]);
 	params_.setFocusMode(caps_.focusModes[focusModeIdx]);
 	params_.setWhiteBalance(caps_.wbModes[wbModeIdx]);
 	params_.setISO(caps_.isoModes[isoModeIdx]);
-	params_.setVideoSize(pSize_);
 	params_.setPreviewFormat(caps_.previewFormats[0]); //0:yuv420sp 1:yuv420p 2:nv12-venus 3:bayer-rggb
 	params_.setPreviewSize(pSize_);
 	params_.setPictureSize(pSize_);
@@ -197,6 +167,7 @@ int SnapCam::initialize(CamConfig cfg)
 
 	camera_->startPreview();
 
+/*
 	params_.setManualExposure(cfg.exposureValue);
 	params_.setManualGain(cfg.gainValue);
 	printf("Setting exposure value =  %d , gain value = %d \n", cfg.exposureValue, cfg.gainValue );
@@ -205,12 +176,9 @@ int SnapCam::initialize(CamConfig cfg)
 
 	if (rc) {
 		printf("Commit failed\n");
-		printCapabilities();
 
-	} else {
-		// camera_->startRecording();
 	}
-
+*/
 	config_ = cfg;
 
 }
@@ -218,7 +186,6 @@ int SnapCam::initialize(CamConfig cfg)
 SnapCam::~SnapCam()
 {
 	camera_->stopPreview();
-	// camera_->stopRecording();
 
 	/* release camera device */
 	ICameraDevice::deleteInstance(&camera_);
@@ -285,48 +252,6 @@ void SnapCam::takePicture() {
         this->camera_->takePicture();
 }
 
-/**
- *
- * FUNCTION: onVideoFrame
- *
- *  - This is called every frame I
- *  - In parameter frame (ICameraFrame) also has the timestamps
- *    field which is public
- *
- * @param frame
- *
- */
-void SnapCam::onVideoFrame(ICameraFrame *frame)
-{
-	uint64_t time_stamp = get_absolute_time();
-
-	if (!cb_) {
-		return;        // as long as nobody is listening, we don't need to do anything
-	}
-
-	int frame_height = pSize_.height;
-	int frame_width = pSize_.width;
-
-	cv::Mat matFrame;
-
-	if (config_.func == 0) { //highres
-		cv::Mat mYUV = cv::Mat(1.5 * frame_height, frame_width, CV_8UC1, frame->data);
-		cv::cvtColor(mYUV, matFrame, CV_YUV420sp2RGB);
-                cv::transpose(matFrame, matFrame);
-                cv::flip(matFrame, matFrame, 1);
-		mYUV.release();
-
-	} else { //optical flow
-		matFrame = cv::Mat(frame_height, frame_width, CV_8UC1, frame->data);
-	}
-
-	if (auto_exposure_) {
-		updateExposure(matFrame);
-	}
-
-	cb_(matFrame, time_stamp);
-	matFrame.release();
-}
 
 int SnapCam::printCapabilities()
 {
@@ -615,262 +540,6 @@ static int setDefaultConfig(CamConfig &cfg)
 		break;
 	}
 
-}
-
-/**
- *  FUNCTION: parseCommandline
- *
- *  parses commandline options and populates the config
- *  data structure
- *
- *  */
-static CamConfig parseCommandline(int argc, char *argv[])
-{
-	CamConfig cfg;
-	cfg.func = CAM_FUNC_HIRES;
-
-	int c;
-	int outputFormat;
-	int exposureValueInt = 0;
-	int gainValueInt = 0;
-
-	while ((c = getopt(argc, argv, "hdt:io:e:g:p:v:ns:f:r:V:j:")) != -1) {
-		switch (c) {
-		case 'f': {
-				string str(optarg);
-
-				if (str == "hires") {
-					cfg.func = CAM_FUNC_HIRES;
-
-				} else if (str == "optic") {
-					cfg.func = CAM_FUNC_OPTIC_FLOW;
-
-				} else if (str == "right") {
-					cfg.func = CAM_FUNC_RIGHT_SENSOR;
-
-				} else if (str == "stereo") {
-					cfg.func = CAM_FUNC_STEREO;
-				}
-
-				break;
-			}
-
-		case '?':
-			break;
-
-		default:
-			break;
-		}
-	}
-
-	setDefaultConfig(cfg);
-
-	optind = 1;
-
-	while ((c = getopt(argc, argv, "hdt:io:e:g:p:v:ns:f:r:V:j:")) != -1) {
-		switch (c) {
-		case 't':
-			cfg.runTime = atoi(optarg);
-			break;
-
-		case 'p': {
-				string str(optarg);
-
-				if (str == "4k") {
-					cfg.pSize = CameraSizes::UHDSize();
-
-				} else if (str == "1080p") {
-					cfg.pSize = CameraSizes::FHDSize();
-
-				} else if (str == "720p") {
-					cfg.pSize = CameraSizes::HDSize();
-
-				} else if (str == "VGA") {
-					cfg.pSize = CameraSizes::VGASize();
-
-				} else if (str == "QVGA") {
-					cfg.pSize = CameraSizes::QVGASize();
-
-				} else if (str == "stereoVGA") {
-					cfg.pSize = CameraSizes::stereoVGASize();
-
-				} else if (str == "stereoQVGA") {
-					cfg.pSize = CameraSizes::stereoQVGASize();
-				}
-
-				break;
-			}
-
-		case 'v': {
-				string str(optarg);
-
-				if (str == "4k") {
-					cfg.vSize = CameraSizes::UHDSize();
-					cfg.testVideo = true;
-
-				} else if (str == "1080p") {
-					cfg.vSize = CameraSizes::FHDSize();
-					cfg.testVideo = true;
-
-				} else if (str == "720p") {
-					cfg.vSize = CameraSizes::HDSize();
-					cfg.testVideo = true;
-
-				} else if (str == "VGA") {
-					cfg.vSize = CameraSizes::VGASize();
-					cfg.testVideo = true;
-
-				} else if (str == "QVGA") {
-					cfg.vSize = CameraSizes::QVGASize();
-					cfg.testVideo = true;
-
-				} else if (str == "stereoVGA") {
-					cfg.vSize = CameraSizes::stereoVGASize();
-					cfg.testVideo = true;
-
-				} else if (str == "stereoQVGA") {
-					cfg.vSize = CameraSizes::stereoQVGASize();
-					cfg.testVideo = true;
-
-				} else if (str == "disable") {
-					cfg.testVideo = false;
-				}
-
-				break;
-			}
-
-		case 'n':
-			cfg.testSnapshot = true;
-			cfg.picSizeIdx = 0;
-			break;
-
-		case 's': {
-				string str(optarg);
-
-				if (str == "4k") {
-					cfg.picSize = CameraSizes::UHDSize();
-
-				} else if (str == "1080p") {
-					cfg.picSize = CameraSizes::FHDSize();
-
-				} else if (str == "720p") {
-					cfg.picSize = CameraSizes::HDSize();
-
-				} else if (str == "VGA") {
-					cfg.picSize = CameraSizes::VGASize();
-
-				} else if (str == "QVGA") {
-					cfg.picSize = CameraSizes::QVGASize();
-
-				} else if (str == "stereoVGA") {
-					cfg.picSize = CameraSizes::stereoVGASize();
-
-				} else if (str == "stereoQVGA") {
-					cfg.picSize = CameraSizes::stereoQVGASize();
-				}
-
-				cfg.testSnapshot = true;
-				cfg.picSizeIdx = -1;
-				break;
-			}
-
-		case 'd':
-			cfg.dumpFrames = true;
-			break;
-
-		case 'i':
-			cfg.infoMode = true;
-			break;
-
-		case  'e':
-			cfg.exposureValue =  atoi(optarg);
-
-			if (cfg.exposureValue < MIN_EXPOSURE_VALUE || cfg.exposureValue > MAX_EXPOSURE_VALUE) {
-				printf("Invalid exposure value. Using default\n");
-				cfg.exposureValue = DEFAULT_EXPOSURE_VALUE;
-			}
-
-			break;
-
-		case  'g':
-			cfg.gainValue =  atoi(optarg);
-
-			if (cfg.gainValue < MIN_GAIN_VALUE || cfg.gainValue > MAX_GAIN_VALUE) {
-				printf("Invalid exposure value. Using default\n");
-				cfg.gainValue = DEFAULT_GAIN_VALUE;
-			}
-
-			break;
-
-		case 'r':
-			cfg.fps = atoi(optarg);
-
-			if (!(cfg.fps == 30 || cfg.fps == 60 || cfg.fps == 90 || cfg.fps == 120)) {
-				cfg.fps = DEFAULT_CAMERA_FPS;
-				printf("Invalid fps values. Using default = %d ", cfg.fps);
-			}
-
-			break;
-
-		case 'o':
-			outputFormat = atoi(optarg);
-
-			switch (outputFormat) {
-			case 0: /* IMX135 , IMX214 */
-				cfg.outputFormat = YUV_FORMAT;
-				break;
-
-			case 1: /* IMX214 */
-				cfg.outputFormat = RAW_FORMAT;
-				cfg.testVideo = false;
-				break;
-
-			default:
-				printf("Invalid format. Setting to default YUV_FORMAT");
-				cfg.outputFormat = YUV_FORMAT;
-				break;
-			}
-
-			break;
-
-		case 'j': {
-				string str(optarg);
-
-				if (str == "jpeg") {
-					cfg.snapshotFormat = JPEG_FORMAT;
-
-				} else if (str == "raw") {
-					cfg.snapshotFormat = RAW_FORMAT;
-
-				} else {
-					printf("invalid snapshot format \"%s\", using default\n",
-					       optarg);
-				}
-
-				break;
-			}
-
-		case 'V':
-			cfg.logLevel = (AppLoglevel)atoi(optarg);
-			break;
-
-		case 'f':
-			break;
-
-		case 'h':
-		case '?':
-			printf("Invalid arguments\n");
-
-		default:
-			abort();
-		}
-	}
-
-	if (cfg.snapshotFormat == RAW_FORMAT) {
-		cfg.testVideo = false;
-	}
-
-	return cfg;
 }
 
 static uint64_t get_absolute_time()
