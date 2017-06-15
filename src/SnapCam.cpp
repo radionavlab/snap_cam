@@ -37,9 +37,6 @@
 
 #include "SnapCam.h"
 
-#include <sstream>
-#include <vector>
-
 using namespace std;
 using namespace camera;
 
@@ -193,6 +190,7 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
 }
 
 void SnapCam::takePicture() {
+
 	pthread_mutex_lock(&mutexPicDone);
 	while(isPicDone == false){
     		pthread_cond_wait(&cvPicDone, &mutexPicDone);
@@ -200,8 +198,25 @@ void SnapCam::takePicture() {
 	isPicDone=false;
 	pthread_mutex_unlock(&mutexPicDone);
 
-	usleep(100000);
+        struct timeval tp;
+        gettimeofday(&tp, NULL);
+        long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000;
+        static long long lastTime = currentTime;
+
+        long long timeToSleepMs = 0;
+        long long leftover = 5000 - (currentTime - lastTime);
+        if(leftover > 0) {
+            timeToSleepMs = leftover;
+        }
+
+	this->camera_->stopPreview();
+	usleep(timeToSleepMs * 1000);
+	this->camera_->startPreview();
+        usleep(100000);
+
         this->camera_->takePicture();
+
+        lastTime = currentTime;
 }
 
 

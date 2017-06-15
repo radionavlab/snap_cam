@@ -35,6 +35,8 @@
 #include <functional>
 #include <string>
 #include <mutex>
+#include <vector>
+#include <sstream>
 
 #include <unistd.h>
 #include <pthread.h>

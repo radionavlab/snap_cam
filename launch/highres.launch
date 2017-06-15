@@ -4,13 +4,13 @@
 <!--
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" launch-prefix="/home/linaro/ws/src/snap_cam/launch/run_tmux" />
 -->
-  <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen">
+  <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" >
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
-    <param name="camera_resolution" value="720p"/>
+    <param name="camera_resolution" value="VGA"/>
 
     <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
-    <param name="focus_mode" value="continuous-picture"/>
+    <param name="focus_mode" value="continuous-video"/>
 
     <!-- auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct -->
     <param name="white_balance" value="auto"/>
