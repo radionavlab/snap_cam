@@ -31,6 +31,8 @@
  *
  *  Created on: Mar 16, 2016
  *      Author: Christoph, Nicolas
+ *  Modified on: June 14, 2017
+ *      Author: Tucker Haydon
  */
 
 #include "SnapCam.h"
@@ -44,9 +46,8 @@ using namespace camera;
 static uint64_t get_absolute_time();
 
 SnapCam::SnapCam(CamConfig cfg)
-	: cb_(nullptr),
-	auto_exposure_(false)
 {
+        cb_=nullptr;
 	isPicDone=true;
 	pthread_mutex_init(&mutexPicDone, 0);
     	pthread_cond_init(&cvPicDone, 0);
@@ -128,36 +129,19 @@ int SnapCam::initialize(CamConfig cfg)
 	caps_.previewFormats = params_.getSupportedPreviewFormats();
 	caps_.rawSize = params_.get("raw-size");
 	printCapabilities();
-
-	int pFpsIdx;
-	int vFpsIdx;
-
-	pSize_ = cfg.pSize;
-
-	rc = setFPSindex(cfg.fps, pFpsIdx, vFpsIdx);
-
-	if ( rc == -1)
-	{
-		printf("FPS indexing failed pFpsIdx: %d  vFpsIdx: %d\n", pFpsIdx, vFpsIdx);
-		return rc;
-	}
-
-        /* auto, infinity, macro, continuous-video, continuous-picture, manual */
-	params_.setFocusMode("continuous-picture");
-
-        /* auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct */
-	params_.setWhiteBalance("fluorescent");
-
-        /* auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 */
-	params_.setISO("ISO3200");
-
-        /* yuv420sp, yuv420p, nv12-venus, bayer-rggb */
-	params_.setPreviewFormat("yuv420sp");
-
-
-	params_.setPreviewSize(pSize_);
-	params_.setPictureSize(pSize_);
-	params_.setPreviewFpsRange(caps_.previewFpsRanges[pFpsIdx]);
+        
+	params_.setPreviewSize(cfg.previewSize);
+	params_.setPictureSize(cfg.pictureSize);
+	params_.setFocusMode(cfg.focusMode);
+	params_.setWhiteBalance(cfg.whiteBalance);
+	params_.setISO(cfg.ISO);
+        params_.setSharpness(cfg.sharpness);
+        params_.setBrightness(cfg.brightness);
+        params_.setContrast(cfg.contrast);
+	// params_.setPreviewFpsRange(caps_.previewFpsRanges[pFpsIdx]);
+	params_.setPreviewFormat(cfg.previewFormat);
+        // params_.setVerticalFlip(false);
+        // params_.setHorizontalMirror(false);
 
 	rc = params_.commit();
 	if (rc) {
@@ -165,7 +149,18 @@ int SnapCam::initialize(CamConfig cfg)
 		return rc;
 	}
 
+        /* Must start preview before setting manual gain and exposure */
 	camera_->startPreview();
+
+        // params_.setManualGain(cfg.gain);
+        // params_.setManualExposure(cfg.exposure);
+
+	rc = params_.commit();
+	if (rc) {
+		printf("Commit failed\n");
+		return rc;
+	}
+
 	config_ = cfg;
 
 }
@@ -364,143 +359,11 @@ void SnapCam::setListener(CallbackFunction fun)
  *
  * */
 template <class T>
-void SnapCam::setListener(CallbackFunction fun, T *obj)
-{
+void SnapCam::setListener(CallbackFunction fun, T *obj) {
 	cb_ = std::bind(fun, obj);
 }
 
-void SnapCam::updateExposure(cv::Mat &frame)
-{
-	//limit update rate to 5Hz
-	static int counter = 1;
-	static int devider = std::round(config_.fps*0.2);
-	if (counter%devider != 0) {
-		counter++;
-		return;
-	}
-	counter = 1;
-
-	//init histogram variables
-	static cv::Mat hist;
-	static int channels[] = {0};
-	static int histSize[] = {10}; //10 bins
-	static float range[] = { 0, 255 };
-	static const float* ranges[] = { range };
-
-	// only use 128x128 window to calculate exposure
-	static int mask_size = 128;
-	static cv::Mat mask(frame.rows,frame.cols,CV_8U,cv::Scalar(0));
-	static bool mask_set = false;
-	if (!mask_set) {
-		mask(cv::Rect(frame.cols/2-mask_size/2,frame.rows/2-mask_size/2,mask_size,mask_size)) = 255;
-		mask_set = true;
-	}
-
-	//calculate the histogram with 10 bins
-	calcHist( &frame, 1, channels, mask,
-	     hist, 1, histSize, ranges,
-	     true, // the histogram is uniform
-	     false );
-
-	//calculate Mean Sample Value (MSV)
-	float msv = 0.0f;
-	for (int i = 0; i < histSize[0]; i++) {
-		msv += (i+1)*hist.at<float>(i)/16384.0f; //128x128 -> 16384
-	}
-
-	//get first exposure value
-	static float exposure = config_.exposureValue;
-	static float exposure_old = config_.exposureValue;
-
-	//MSV target value
-	static const float msv_target = 5.0f;
-
-	//PID-controller
-	static const float P_gain = 30.0f;
-	static const float I_gain = 0.1f;
-	static const float D_gain = 0.1f;
-
-	float msv_error = msv_target - msv;
-	static float msv_error_old = msv_error;
-	static float msv_error_int = 0.0f;
-	msv_error_int += msv_error;
-	float msv_error_d = msv_error - msv_error_old;
-
-	exposure += P_gain*msv_error + I_gain*msv_error_int + D_gain*msv_error_d;
-
-	if (exposure < 1.0f)
-		exposure = 1.0f;
-	if (exposure > 511.0f)
-		exposure = 511.0f;
-
-	msv_error_old = msv_error;
-
-	//set new exposure value if bigger than threshold
-	if (fabs(exposure - exposure_old) > EXPOSURE_CHANGE_THRESHOLD) {
-		params_.setManualExposure(std::round(exposure));
-		params_.commit();
-		exposure_old = exposure;
-	}
-
-}
-
-/**
- *  FUNCTION: setDefaultConfig
- *
- *  set default config based on camera module
- *
- * */
-static int setDefaultConfig(CamConfig &cfg)
-{
-
-	cfg.outputFormat = YUV_FORMAT;
-	cfg.dumpFrames = false;
-	cfg.runTime = 10;
-	cfg.infoMode = false;
-	cfg.testVideo = true;
-	cfg.testSnapshot = false;
-	cfg.exposureValue = DEFAULT_EXPOSURE_VALUE;  /* Default exposure value */
-	cfg.gainValue = DEFAULT_GAIN_VALUE;  /* Default gain value */
-	cfg.fps = DEFAULT_CAMERA_FPS;
-	cfg.picSizeIdx = -1;
-	cfg.logLevel = CAM_LOG_SILENT;
-	cfg.snapshotFormat = JPEG_FORMAT;
-
-	switch (cfg.func) {
-	case CAM_FUNC_OPTIC_FLOW:
-		cfg.pSize   = CameraSizes::VGASize();
-		cfg.vSize   = CameraSizes::VGASize();
-		cfg.picSize   = CameraSizes::VGASize();
-		cfg.outputFormat = RAW_FORMAT;
-		break;
-
-	case CAM_FUNC_RIGHT_SENSOR:
-		cfg.pSize   = CameraSizes::VGASize();
-		cfg.vSize   = CameraSizes::VGASize();
-		cfg.picSize   = CameraSizes::VGASize();
-		break;
-
-	case CAM_FUNC_STEREO:
-		cfg.pSize = CameraSizes::stereoVGASize();
-		cfg.vSize  = CameraSizes::stereoVGASize();
-		cfg.picSize  = CameraSizes::stereoVGASize();
-		break;
-
-	case CAM_FUNC_HIRES:
-		cfg.pSize = CameraSizes::FHDSize();
-		cfg.vSize = CameraSizes::HDSize();
-		cfg.picSize = CameraSizes::FHDSize();
-		break;
-
-	default:
-		printf("invalid sensor function \n");
-		break;
-	}
-
-}
-
-static uint64_t get_absolute_time()
-{
+static uint64_t get_absolute_time() {
 	struct timespec time;
 
 	uint64_t micros = 0;

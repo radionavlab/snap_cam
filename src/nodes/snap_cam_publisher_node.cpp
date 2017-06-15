@@ -1,5 +1,4 @@
 /*
-* optical_flow.cpp
 *
 *  Created on: Mar 16, 2016
 *      Author: Nicolas
@@ -48,76 +47,101 @@ void imageCallback(unsigned char *buffer, int size) {
 
 int main(int argc, char **argv)
 {
+
+        /* Ros init */
 	ros::init(argc, argv, "snap_cam_highres/publisher");
 	ros::NodeHandle nh("~");
 	image_transport::ImageTransport it(nh);
         image_pub = nh.advertise<sensor_msgs::CompressedImage>("image_raw/compressed", 1);
 
-	std::string res;
 
+        /* Camera parameters */
+	CamConfig cfg;
+	cfg.func = CAM_FUNC_HIRES;
+
+        /* auto, infinity, macro, continuous-video, continuous-picture, manual */
+	if (!nh.getParam("focus_mode", cfg.focusMode)) {
+		cfg.focusMode="auto";
+		ROS_WARN("Defaulting to auto focus mode.");
+	}
+
+        /* auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct */
+	if (!nh.getParam("white_balance", cfg.whiteBalance)) {
+		cfg.whiteBalance="auto";
+		ROS_WARN("Defaulting to auto white balance.");
+	}
+
+        /* auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 */
+	if (!nh.getParam("iso", cfg.ISO)) {
+		cfg.ISO="auto";
+		ROS_WARN("Defaulting to auto ISO.");
+	}
+
+        /* yuv420sp, yuv420p, nv12-venus, bayer-rggb */
+	if (!nh.getParam("preview_format", cfg.previewFormat)) {
+		cfg.previewFormat="yuv420sp";
+		ROS_WARN("Defaulting to yuv420sp preview format.");
+	}
+
+        /* 1-6 in increments of 1 */
+	if (!nh.getParam("brightness", cfg.brightness)) {
+		cfg.brightness=3;
+		ROS_WARN("Defaulting to 3 brightness");
+	}
+
+        /* 0-36 in increments of 6 */
+	if (!nh.getParam("sharpness", cfg.sharpness)) {
+		cfg.sharpness=18;
+		ROS_WARN("Defaulting to 18 sharpness");
+	}
+
+        /* 1-10 in increments of 1 */
+	if (!nh.getParam("contrast", cfg.contrast)) {
+		cfg.contrast=5;
+		ROS_WARN("Defaulting to 5 contrast.");
+	}
+
+        /* QVGA, VGA, 720p, 1080p, 4k */
+	std::string res;
 	if (!nh.getParam("camera_resolution", res)) {
 		res = "VGA";
 		ROS_WARN("No resolution parameter provided. Defaulting to %s.", res.c_str());
 	}
 
-	std::string camera_type;
-
-	if (!nh.getParam("camera_type", camera_type)) {
-		camera_type = "highres";
-		ROS_WARN("No camera type parameter provided. Defaulting to %s.", camera_type.c_str());
-	}
-
-	int camera_fps_idx;
-
-	if (!nh.getParam("camera_fps_idx", camera_fps_idx)) {
-		camera_fps_idx = 0;
-		ROS_WARN("No camera fps idx parameter provided. Defaulting to %d.", camera_fps_idx);
-	}
-
-	CamConfig cfg;
-
-	if (camera_type == "highres") {
-		cfg.func = CAM_FUNC_HIRES;
-
-	} else if (camera_type == "optflow") {
-		cfg.func = CAM_FUNC_OPTIC_FLOW;
-
-	} else {
-		ROS_ERROR("Invalid camera type %s. Defaulting to highres.", camera_type.c_str());
-		cfg.func = CAM_FUNC_HIRES;
-	}
-
+        /* Set resolution size */
 	if (res == "4k") {
-		cfg.pSize = CameraSizes::UHDSize();
-
+		cfg.previewSize = CameraSizes::UHDSize();
+		cfg.pictureSize = CameraSizes::UHDSize();
 	} else if (res == "1080p") {
-		cfg.pSize = CameraSizes::FHDSize();
-
+		cfg.previewSize = CameraSizes::FHDSize();
+		cfg.pictureSize = CameraSizes::FHDSize();
 	} else if (res == "720p") {
-		cfg.pSize = CameraSizes::HDSize();
-
+		cfg.previewSize = CameraSizes::HDSize();
+		cfg.pictureSize = CameraSizes::HDSize();
 	} else if (res == "VGA") {
-		cfg.pSize = CameraSizes::VGASize();
-
+		cfg.previewSize = CameraSizes::VGASize();
+		cfg.pictureSize = CameraSizes::VGASize();
 	} else if (res == "QVGA") {
-		cfg.pSize = CameraSizes::QVGASize();
-
+		cfg.previewSize = CameraSizes::QVGASize();
+		cfg.pictureSize = CameraSizes::QVGASize();
 	} else if (res == "stereoVGA") {
-		cfg.pSize = CameraSizes::stereoVGASize();
-
+		cfg.previewSize = CameraSizes::stereoVGASize();
+		cfg.pictureSize = CameraSizes::stereoVGASize();
 	} else if (res == "stereoQVGA") {
-		cfg.pSize = CameraSizes::stereoQVGASize();
-
+		cfg.previewSize = CameraSizes::stereoQVGASize();
+		cfg.pictureSize = CameraSizes::stereoQVGASize();
 	} else {
 		ROS_ERROR("Invalid resolution %s. Defaulting to VGA\n", res.c_str());
-		cfg.pSize = CameraSizes::stereoVGASize();
+		cfg.previewSize = CameraSizes::stereoVGASize();
+		cfg.pictureSize = CameraSizes::stereoVGASize();
 	}
 
-	cfg.fps = camera_fps_idx;
-
+        
+        /* Program start */
 	SnapCam cam(cfg);
 	cam.setListener(imageCallback);
 
+        /* Main loop */
         while(nh.ok()) {
             cam.takePicture();
 	    ros::spinOnce();

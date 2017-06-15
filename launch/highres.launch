@@ -1,38 +1,39 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
-  <arg name="resolution" default="720p"/>
-  <arg name="fps" default="0"/>
-  <arg name="exposure" default="100"/>
-  <arg name="gain" default="50"/>
 
 <!--
-  <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" launch-prefix="/home/linaro/ws/src/snap_cam/launch/run_tmux" >
+  <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" launch-prefix="/home/linaro/ws/src/snap_cam/launch/run_tmux" />
 -->
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen">
-    <!--
-    "optflow" or "highres" -->
-    <param name="camera_type" value="highres"/>
 
-    <!--
-    highres:      QVGA  : (320,240)
-                  VGA   : (640,480)
-                  720p  : (1280,720)
-                  1080p : (1920,1080)
-                  4k    : (4096,2160) -->
-    <param name="camera_resolution" value="$(arg resolution)"/>
+    <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
+    <param name="camera_resolution" value="720p"/>
 
-    <!--
-    highres: 0: 15 1: 24 2: 30 3: 60 4: 90 6: 120 -->
-    <param name="camera_fps_idx" value="$(arg fps)"/>
+    <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
+    <param name="focus_mode" value="continuous-picture"/>
 
-    <!--
-    exposure: integer between 0 and 511 --> 
-    <param name="exposure" value="$(arg exposure)"/>
+    <!-- auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct -->
+    <param name="white_balance" value="auto"/>
 
-    <!--
-    gain: integer between 0 and 255 -->
-    <param name="gain" value="$(arg gain)"/>
+    <!-- auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 -->
+    <param name="iso" value="ISO3200"/>
 
-    <param name="topic_name" value="image"/>
-  </node>
+    <!-- yuv420sp, yuv420p, nv12-venus, bayer-rggb -->
+    <param name="preview_format" value="yuv420sp"/>
+
+    <!-- brightness: integer beween 1-6-->
+    <param name="brightness" value="3"/>
+
+    <!-- sharpness: integer between 0-36 in increments of 6-->
+    <param name="sharpness" value="0"/>
+
+    <!-- contrast: integer between 0-10 -->
+    <param name="contrast" value="5"/>
+
+    <!-- exposure: integer between 0 and 511 --> 
+    <param name="exposure" value="100"/>
+
+    <!-- gain: integer between 0 and 255 -->
+    <param name="gain" value="50"/>
+    </node>
 </launch>
