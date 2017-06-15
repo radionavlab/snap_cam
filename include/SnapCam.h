@@ -109,35 +109,23 @@ enum CamFunction {
 	CAM_FUNC_STEREO = 3,
 };
 
-enum AppLoglevel {
-	CAM_LOG_SILENT = 0,
-	CAM_LOG_ERROR = 1,
-	CAM_LOG_INFO = 2,
-	CAM_LOG_DEBUG = 3,
-	CAM_LOG_MAX,
-};
-
 /**
 *  Helper class to store all parameter settings
 */
 struct CamConfig {
-	int32_t cameraId;
-	bool dumpFrames;
-	bool infoMode;
-	bool testSnapshot;
-	bool testVideo;
-	int runTime;
-	int exposureValue;
-	int gainValue;
+        int cameraId;
+        string focusMode;
+        string whiteBalance;
+        string ISO;
+        string previewFormat;
+        int sharpness;
+        int brightness;
+        int contrast;
+	int exposure;
+	int gain;
 	CamFunction func;
-	OutputFormatType outputFormat;
-	OutputFormatType snapshotFormat;
-	ImageSize pSize;
-	ImageSize vSize;
-	ImageSize picSize;
-	int picSizeIdx;
-	int fps;
-	AppLoglevel logLevel;
+	ImageSize previewSize;
+	ImageSize pictureSize;
 };
 
 // Callback function.
