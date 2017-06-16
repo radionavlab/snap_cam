@@ -101,6 +101,12 @@ int main(int argc, char **argv)
 		ROS_WARN("Defaulting to 5 contrast.");
 	}
 
+        /* Integer time in ms */
+	if (!nh.getParam("sleep_time", cfg.sleepTime)) {
+		cfg.sleepTime = 0;
+		ROS_WARN("No sleep time provided. Defaulting to 0 ms.");
+	}
+
         /* QVGA, VGA, 720p, 1080p, 4k */
 	std::string res;
 	if (!nh.getParam("camera_resolution", res)) {

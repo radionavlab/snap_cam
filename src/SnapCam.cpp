@@ -135,10 +135,12 @@ int SnapCam::initialize(CamConfig cfg)
         params_.setSharpness(cfg.sharpness);
         params_.setBrightness(cfg.brightness);
         params_.setContrast(cfg.contrast);
-	// params_.setPreviewFpsRange(caps_.previewFpsRanges[pFpsIdx]);
 	params_.setPreviewFormat(cfg.previewFormat);
-        // params_.setVerticalFlip(false);
-        // params_.setHorizontalMirror(false);
+
+        // params_.set("preview-format", "bayer-rggb");
+        // params_.set("picture-format", "bayer-mipi-10bggr");
+        // params_.set("picture-format", "bayer-mipi-10gbrg");
+        // params_.set("raw-size", "1920x1080");
 
 	rc = params_.commit();
 	if (rc) {
@@ -149,8 +151,10 @@ int SnapCam::initialize(CamConfig cfg)
         /* Must start preview before setting manual gain and exposure */
 	camera_->startPreview();
 
-        // params_.setManualGain(cfg.gain);
-        // params_.setManualExposure(cfg.exposure);
+        params_.setManualGain(cfg.gain);
+        params_.setManualExposure(cfg.exposure);
+        // params_.setVerticalFlip(true);
+        // params_.setHorizontalMirror(false);
 
 	rc = params_.commit();
 	if (rc) {
@@ -191,32 +195,33 @@ void SnapCam::onPictureFrame(ICameraFrame *frame) {
 
 void SnapCam::takePicture() {
 
-	pthread_mutex_lock(&mutexPicDone);
+        usleep(config_.sleepTime);
+        pthread_mutex_lock(&mutexPicDone);
+        isPicDone = false;
+        camera_->takePicture();
+
 	while(isPicDone == false){
     		pthread_cond_wait(&cvPicDone, &mutexPicDone);
 	}
-	isPicDone=false;
 	pthread_mutex_unlock(&mutexPicDone);
-
+/*
         struct timeval tp;
         gettimeofday(&tp, NULL);
         long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000;
         static long long lastTime = currentTime;
 
         long long timeToSleepMs = 0;
-        long long leftover = 5000 - (currentTime - lastTime);
+        long long leftover = 900 - (currentTime - lastTime);
         if(leftover > 0) {
             timeToSleepMs = leftover;
         }
 
-	this->camera_->stopPreview();
 	usleep(timeToSleepMs * 1000);
-	this->camera_->startPreview();
-        usleep(100000);
 
-        this->camera_->takePicture();
+*/
+        // usleep(100000);
 
-        lastTime = currentTime;
+        // lastTime = currentTime;
 }
 
 

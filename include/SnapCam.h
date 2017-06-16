@@ -128,6 +128,7 @@ struct CamConfig {
 	CamFunction func;
 	ImageSize previewSize;
 	ImageSize pictureSize;
+        int sleepTime;
 };
 
 // Callback function.
@@ -149,7 +150,6 @@ public:
 	void setListener(CallbackFunction fun);  // register a function callback
 	template <class T>
 	void setListener(CallbackFunction fun, T *obj);  //register a function callback that is a class member
-	void setAutoExposure(bool auto_exposure) {auto_exposure_ = auto_exposure; };
 
 	/* listener methods */
 	virtual void onError();
@@ -175,13 +175,6 @@ private:
 	pthread_mutex_t mutexPicDone;
 	bool isPicDone;
 
-	bool auto_exposure_;
-
-	int frameCounter;
-	int camera_type;
-	int camera_resolution;
-	int camera_fps;
-	int camera_used;
 	std::string topic_name;
 
 	int printCapabilities();

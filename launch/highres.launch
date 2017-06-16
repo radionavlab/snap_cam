@@ -7,16 +7,16 @@
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" >
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
-    <param name="camera_resolution" value="VGA"/>
+    <param name="camera_resolution" value="720p"/>
 
     <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
-    <param name="focus_mode" value="continuous-video"/>
+    <param name="focus_mode" value="continuous-picture"/>
 
     <!-- auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct -->
-    <param name="white_balance" value="auto"/>
+    <param name="white_balance" value="daylight"/>
 
     <!-- auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 -->
-    <param name="iso" value="ISO3200"/>
+    <param name="iso" value="auto"/>
 
     <!-- yuv420sp, yuv420p, nv12-venus, bayer-rggb -->
     <param name="preview_format" value="yuv420sp"/>
@@ -25,7 +25,7 @@
     <param name="brightness" value="3"/>
 
     <!-- sharpness: integer between 0-36 in increments of 6-->
-    <param name="sharpness" value="0"/>
+    <param name="sharpness" value="18"/>
 
     <!-- contrast: integer between 0-10 -->
     <param name="contrast" value="5"/>
@@ -35,5 +35,9 @@
 
     <!-- gain: integer between 0 and 255 -->
     <param name="gain" value="50"/>
+
+    <!-- sleepTime: integer representing the amount of time to sleep between frame captures -->
+    <param name="sleep_time" value="50000"/>
+
     </node>
 </launch>
