@@ -126,21 +126,23 @@ int SnapCam::initialize(CamConfig cfg)
 	caps_.previewFormats = params_.getSupportedPreviewFormats();
 	caps_.rawSize = params_.get("raw-size");
 	printCapabilities();
-        
-	params_.setPreviewSize(cfg.previewSize);
-	params_.setPictureSize(cfg.pictureSize);
-	params_.setFocusMode(cfg.focusMode);
-	params_.setWhiteBalance(cfg.whiteBalance);
-	params_.setISO(cfg.ISO);
-        params_.setSharpness(cfg.sharpness);
-        params_.setBrightness(cfg.brightness);
-        params_.setContrast(cfg.contrast);
-	params_.setPreviewFormat(cfg.previewFormat);
-
-        // params_.set("preview-format", "bayer-rggb");
-        // params_.set("picture-format", "bayer-mipi-10bggr");
-        // params_.set("picture-format", "bayer-mipi-10gbrg");
-        // params_.set("raw-size", "1920x1080");
+       
+        if(cfg.func == CAM_FUNC_HIRES) {
+            params_.setPreviewSize(cfg.previewSize);
+            params_.setPictureSize(cfg.pictureSize);
+            params_.setFocusMode(cfg.focusMode);
+            params_.setWhiteBalance(cfg.whiteBalance);
+            params_.setISO(cfg.ISO);
+            params_.setSharpness(cfg.sharpness);
+            params_.setBrightness(cfg.brightness);
+            params_.setContrast(cfg.contrast);
+            params_.setPreviewFormat(cfg.previewFormat);
+        } else if(cfg.func == CAM_FUNC_OPTIC_FLOW) {
+            params_.setPreviewSize(CameraSizes::VGASize());
+            params_.set("preview-format", "bayer-rggb");
+            params_.set("picture-format", "bayer-mipi-10gbrg");
+            params_.set("raw-size", "640x480");
+        }
 
 	rc = params_.commit();
 	if (rc) {
@@ -151,10 +153,8 @@ int SnapCam::initialize(CamConfig cfg)
         /* Must start preview before setting manual gain and exposure */
 	camera_->startPreview();
 
-        params_.setManualGain(cfg.gain);
-        params_.setManualExposure(cfg.exposure);
-        // params_.setVerticalFlip(true);
-        // params_.setHorizontalMirror(false);
+        // params_.setManualGain(cfg.gain);
+        // params_.setManualExposure(cfg.exposure);
 
 	rc = params_.commit();
 	if (rc) {
@@ -166,18 +166,20 @@ int SnapCam::initialize(CamConfig cfg)
 
 }
 
-SnapCam::~SnapCam()
-{
+SnapCam::~SnapCam() {
 	camera_->stopPreview();
 
 	/* release camera device */
 	ICameraDevice::deleteInstance(&camera_);
 }
 
-void SnapCam::onError()
-{
+void SnapCam::onError() {
 	printf("camera error!, aborting\n");
 	exit(EXIT_FAILURE);
+}
+
+void SnapCam::onPreviewFrame(ICameraFrame *frame) {
+        cout << "Size: " << frame->size << endl;
 }
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {
@@ -204,24 +206,6 @@ void SnapCam::takePicture() {
     		pthread_cond_wait(&cvPicDone, &mutexPicDone);
 	}
 	pthread_mutex_unlock(&mutexPicDone);
-/*
-        struct timeval tp;
-        gettimeofday(&tp, NULL);
-        long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000;
-        static long long lastTime = currentTime;
-
-        long long timeToSleepMs = 0;
-        long long leftover = 900 - (currentTime - lastTime);
-        if(leftover > 0) {
-            timeToSleepMs = leftover;
-        }
-
-	usleep(timeToSleepMs * 1000);
-
-*/
-        // usleep(100000);
-
-        // lastTime = currentTime;
 }
 
 
@@ -298,68 +282,6 @@ int SnapCam::printCapabilities()
 }
 
 /**
- * FUNCTION: setFPSindex
- *
- * scans through the supported fps values and returns index of
- * requested fps in the array of supported fps
- *
- * @param fps      : Required FPS  (Input)
- * @param pFpsIdx  : preview fps index (output)
- * @param vFpsIdx  : video fps index   (output)
- *
- *  */
-int SnapCam::setFPSindex(int fps, int &pFpsIdx, int &vFpsIdx)
-{
-	int defaultPrevFPSIndex = -1;
-	int defaultVideoFPSIndex = -1;
-	int i, rc = 0;
-
-	for (i = 0; i < caps_.previewFpsRanges.size(); i++) {
-		if ((caps_.previewFpsRanges[i].max) / 1000 == fps) {
-			pFpsIdx = i;
-			break;
-		}
-
-		if ((caps_.previewFpsRanges[i].max) / 1000 == DEFAULT_CAMERA_FPS) {
-			defaultPrevFPSIndex = i;
-		}
-	}
-
-	if (i >= caps_.previewFpsRanges.size()) {
-		if (defaultPrevFPSIndex != -1) {
-			pFpsIdx = defaultPrevFPSIndex;
-
-		} else {
-			pFpsIdx = -1;
-			rc = -1;
-		}
-	}
-
-	for (i = 0; i < caps_.videoFpsValues.size(); i++) {
-		if (fps == 30 * caps_.videoFpsValues[i]) {
-			vFpsIdx = i;
-			break;
-		}
-
-		if (DEFAULT_CAMERA_FPS == 30 * caps_.videoFpsValues[i]) {
-			defaultVideoFPSIndex = i;
-		}
-	}
-
-	if (i >= caps_.videoFpsValues.size()) {
-		if (defaultVideoFPSIndex != -1) {
-			vFpsIdx = defaultVideoFPSIndex;
-
-		} else {
-			vFpsIdx = -1;
-			rc = -1;
-		}
-	}
-
-	return rc;
-}
-
-/**
  *  FUNCTION: setListener
  *
  *  Set a listener for image callbacks
@@ -383,12 +305,3 @@ void SnapCam::setListener(CallbackFunction fun, T *obj) {
 	cb_ = std::bind(fun, obj);
 }
 
-static uint64_t get_absolute_time() {
-	struct timespec time;
-
-	uint64_t micros = 0;
-
-	clock_gettime(CLOCK_MONOTONIC, &time);
-	micros = (uint64_t)time.tv_sec * 1000000 + time.tv_nsec / 1000;
-	return micros;
-}

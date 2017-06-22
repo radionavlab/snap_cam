@@ -54,24 +54,6 @@
 #include "camera_log.h"
 #include "camera_parameters.h"
 
-#define DEFAULT_EXPOSURE_VALUE  250
-#define MIN_EXPOSURE_VALUE 0
-#define MAX_EXPOSURE_VALUE 511
-#define DEFAULT_GAIN_VALUE  50
-#define MIN_GAIN_VALUE 0
-#define MAX_GAIN_VALUE 255
-
-#define EXPOSURE_CHANGE_THRESHOLD 10.0
-
-#define DEFAULT_CAMERA_FPS 30
-#define MS_PER_SEC 1000
-#define NS_PER_MS 1000000
-#define NS_PER_US 1000
-
-const int SNAPSHOT_WIDTH_ALIGN = 64;
-const int SNAPSHOT_HEIGHT_ALIGN = 64;
-const int TAKEPICTURE_TIMEOUT_MS = 2000;
-
 using namespace std;
 using namespace camera;
 
@@ -95,12 +77,6 @@ struct CameraCaps {
 	vector<VideoFPS> videoFpsValues;
 	vector<string> previewFormats;
 	string rawSize;
-};
-
-enum OutputFormatType {
-	YUV_FORMAT,
-	RAW_FORMAT,
-	JPEG_FORMAT
 };
 
 enum CamFunction {
@@ -154,6 +130,7 @@ public:
 	/* listener methods */
 	virtual void onError();
         virtual void onPictureFrame(ICameraFrame *frame);
+        virtual void onPreviewFrame(ICameraFrame *frame);
 
         void takePicture();
 
@@ -162,25 +139,15 @@ private:
 
 	ICameraDevice *camera_;
 	CameraParams params_;
-	ImageSize pSize_, vSize_, picSize_;
 	CameraCaps caps_;
 	CamConfig config_;
-
-	uint32_t vFrameCount_, pFrameCount_;
-	float vFpsAvg_, pFpsAvg_;
-
-	uint64_t vTimeStampPrev_, pTimeStampPrev_;
 
 	pthread_cond_t cvPicDone;
 	pthread_mutex_t mutexPicDone;
 	bool isPicDone;
 
-	std::string topic_name;
-
 	int printCapabilities();
-	int setFPSindex(int fps, int &pFpsIdx, int &vFpsIdx);
 	int findCamera(CamConfig cfg, int32_t &camera_id);
-	void updateExposure(cv::Mat &frame);
 
 	CallbackFunction cb_;
 };

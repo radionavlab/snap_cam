@@ -57,7 +57,19 @@ int main(int argc, char **argv)
 
         /* Camera parameters */
 	CamConfig cfg;
-	cfg.func = CAM_FUNC_HIRES;
+
+        string camera;
+        if(!nh.getParam("camera", camera)) {
+            cfg.func = CAM_FUNC_HIRES;
+            ROS_WARN("Defaulting to hires camera.");
+        } else if(camera == "hires") {
+            cfg.func = CAM_FUNC_HIRES;
+        } else if(camera == "optical") {
+            cfg.func = CAM_FUNC_OPTIC_FLOW;
+        } else {
+            cfg.func = CAM_FUNC_HIRES;
+            ROS_WARN("Unknown camera type! Defaulting to hires.");
+        }
 
         /* auto, infinity, macro, continuous-video, continuous-picture, manual */
 	if (!nh.getParam("focus_mode", cfg.focusMode)) {
@@ -149,7 +161,9 @@ int main(int argc, char **argv)
 
         /* Main loop */
         while(nh.ok()) {
-            cam.takePicture();
+            if(cfg.func == CAM_FUNC_HIRES) {
+                cam.takePicture();
+            }
 	    ros::spinOnce();
         }
 

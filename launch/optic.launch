@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+<!--
+  <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" launch-prefix="/home/linaro/ws/src/snap_cam/launch/run_tmux" />
+-->
+  <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" >
+
+    <!-- camera: highres, optical -->
+    <param name="camera" value="optical" />
+
+    </node>
+</launch>
