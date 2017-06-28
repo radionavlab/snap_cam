@@ -128,7 +128,8 @@ int SnapCam::initialize(CamConfig cfg)
 	printCapabilities();
        
         if(cfg.func == CAM_FUNC_HIRES) {
-            params_.setPreviewSize(cfg.previewSize);
+            params_.setPreviewSize(cfg.previewSize); 
+            params_.setVideoSize(cfg.previewSize);
             params_.setPictureSize(cfg.pictureSize);
             params_.setFocusMode(cfg.focusMode);
             params_.setWhiteBalance(cfg.whiteBalance);
@@ -180,6 +181,20 @@ void SnapCam::onError() {
 
 void SnapCam::onPreviewFrame(ICameraFrame *frame) {
         cout << "Size: " << frame->size << endl;
+        static int saved = 0;
+
+        if(saved) return;
+
+        FILE* fp;
+        fp = fopen("/home/linaro/ws/src/snap_cam/image.raw", "wb");
+        if (!fp) {
+            printf("fopen failed");
+            return;
+        }
+        fwrite(frame->data, 640*480, 1, fp);
+
+        fclose(fp);
+        saved=1;
 }
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {

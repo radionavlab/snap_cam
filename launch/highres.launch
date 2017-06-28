@@ -6,8 +6,8 @@
 -->
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" >
 
-    <!-- camera: highres, optical -->
-    <param name="camera" value="highres"/>
+    <!-- camera: hires, optical -->
+    <param name="camera" value="hires"/>
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
     <param name="camera_resolution" value="720p"/>
@@ -19,7 +19,7 @@
     <param name="white_balance" value="daylight"/>
 
     <!-- auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 -->
-    <param name="iso" value="auto"/>
+    <param name="iso" value="ISO3200"/>
 
     <!-- yuv420sp, yuv420p, nv12-venus, bayer-rggb -->
     <param name="preview_format" value="yuv420sp"/>
