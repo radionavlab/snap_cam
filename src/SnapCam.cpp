@@ -140,7 +140,7 @@ int SnapCam::initialize(CamConfig cfg)
             params_.setPreviewFormat(cfg.previewFormat);
         } else if(cfg.func == CAM_FUNC_OPTIC_FLOW) {
             params_.setPreviewSize(CameraSizes::VGASize());
-            params_.set("preview-format", "bayer-rggb");
+            //params_.set("preview-format", "bayer-rggb");
             params_.set("picture-format", "bayer-mipi-10gbrg");
             params_.set("raw-size", "640x480");
         }
@@ -180,13 +180,24 @@ void SnapCam::onError() {
 }
 
 void SnapCam::onPreviewFrame(ICameraFrame *frame) {
-        cout << "Size: " << frame->size << endl;
-        static int saved = 0;
+        
+        static int count = 0;
 
-        if(saved) return;
+        struct timeval tp;
+        gettimeofday(&tp, NULL);
+        long long currentTimeMs = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+        static long long lastTimeMs = currentTimeMs;
+
+        if(currentTimeMs - lastTimeMs < 1000) {
+            return;
+        }
+
+        lastTimeMs = currentTimeMs;
+        
+        string path = "/home/linaro/ws/src/snap_cam/images/frame" + std::to_string(count) + ".raw";
 
         FILE* fp;
-        fp = fopen("/home/linaro/ws/src/snap_cam/image.raw", "wb");
+        fp = fopen(path.c_str(), "wb");
         if (!fp) {
             printf("fopen failed");
             return;
@@ -194,7 +205,7 @@ void SnapCam::onPreviewFrame(ICameraFrame *frame) {
         fwrite(frame->data, 640*480, 1, fp);
 
         fclose(fp);
-        saved=1;
+        count++;
 }
 
 void SnapCam::onPictureFrame(ICameraFrame *frame) {

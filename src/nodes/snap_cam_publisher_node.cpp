@@ -27,20 +27,34 @@
 
 #include "SnapCam.h"
 
+/* Camera parameters */
+CamConfig cfg;
+
+/* Image Publisher */
 ros::Publisher image_pub;
 
 void imageCallback(unsigned char *buffer, int size) {
         static int count = 0;
  
         std::vector<uint8_t> data(buffer, buffer + size);
-        sensor_msgs::CompressedImage msg;
+        if(cfg.func == CAM_FUNC_HIRES) {
+            sensor_msgs::CompressedImage msg;
+    
+            msg.header.stamp=ros::Time::now();
+            msg.header.frame_id="image";
+            msg.format="jpeg";
+            msg.data = data;
+    
+            image_pub.publish(msg);
+        } else {
+            sensor_msgs::Image msg;
+            msg.header.stamp=ros::Time::now();
+            msg.header.frame_id="image";
+            msg.height=480;
+            msg.width=640;
 
-        msg.header.stamp=ros::Time::now();
-        msg.header.frame_id="image";
-        msg.format="jpeg";
-        msg.data = data;
 
-	image_pub.publish(msg);
+        }
 
         count++;
 }
@@ -53,10 +67,6 @@ int main(int argc, char **argv)
 	ros::NodeHandle nh("~");
 	image_transport::ImageTransport it(nh);
         image_pub = nh.advertise<sensor_msgs::CompressedImage>("image_raw/compressed", 1);
-
-
-        /* Camera parameters */
-	CamConfig cfg;
 
         string camera;
         if(!nh.getParam("camera", camera)) {
