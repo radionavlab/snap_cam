@@ -26,9 +26,7 @@
  * IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef _SNAP_CAM_
-#define _SNAP_CAM_
-
+#pragma once
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -80,11 +78,11 @@ struct CameraCaps {
 };
 
 enum CamFunction {
-	CAM_FUNC_UNKNOWN = -1,
-	CAM_FUNC_HIRES = 0,
-	CAM_FUNC_OPTIC_FLOW = 1,
-	CAM_FUNC_RIGHT_SENSOR = 2,
-	CAM_FUNC_STEREO = 3,
+    CAM_FUNC_UNKNOWN = -1,
+    CAM_FUNC_HIRES = 0,
+    CAM_FUNC_OPTIC_FLOW = 1,
+    CAM_FUNC_RIGHT_SENSOR = 2,
+    CAM_FUNC_STEREO = 3,
 };
 
 /**
@@ -101,10 +99,9 @@ struct CamConfig {
         int contrast;
 	int exposure;
 	int gain;
-	CamFunction func;
 	ImageSize previewSize;
 	ImageSize pictureSize;
-        int sleepTime;
+        int func;
 };
 
 // Callback function.
@@ -129,10 +126,8 @@ public:
 
 	/* listener methods */
 	virtual void onError();
-        virtual void onPictureFrame(ICameraFrame *frame);
+        // virtual void onVideoFrame(ICameraFrame *frame);
         virtual void onPreviewFrame(ICameraFrame *frame);
-
-        void takePicture();
 
 private:
 	int initialize(CamConfig cfg);
@@ -142,14 +137,9 @@ private:
 	CameraCaps caps_;
 	CamConfig config_;
 
-	pthread_cond_t cvPicDone;
-	pthread_mutex_t mutexPicDone;
-	bool isPicDone;
-
 	int printCapabilities();
 	int findCamera(CamConfig cfg, int32_t &camera_id);
 
 	CallbackFunction cb_;
 };
 
-#endif // _SNAP_CAM_

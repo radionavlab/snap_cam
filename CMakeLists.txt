@@ -68,7 +68,7 @@ endif()
 # add the ROS executables
 if(CATKIN_BUILD)
     if (camera_LIBRARIES)
-        add_executable(snap_cam_publisher_node src/nodes/snap_cam_publisher_node.cpp)
+        add_executable(snap_cam_publisher_node src/snap_cam_publisher_node.cpp)
         target_link_libraries(snap_cam_publisher_node yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
     endif()
 endif()
