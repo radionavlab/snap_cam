@@ -105,7 +105,7 @@ struct CamConfig {
 };
 
 // Callback function.
-typedef std::function<void(unsigned char *buffer, int size)> CallbackFunction;
+typedef std::function<void(ICameraFrame *frame)> CallbackFunction;
 
 /**
  * CLASS  SnapCam

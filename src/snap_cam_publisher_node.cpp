@@ -31,22 +31,16 @@
 CamConfig cfg;
 
 /* Image Publisher */
-ros::Publisher image_pub;
+image_transport::Publisher image_pub;
 
-void imageCallback(unsigned char *buffer, int size) 
+/* Camera resolution */
+int height;
+int width;
+
+void imageCallback(ICameraFrame *frame) 
 {
-    /* Image size nonstandard!! */
-    // int height = 1088;
-    // int width = 1920;
-
-    // int height = 736;
-    // int width = 1280;
-
-    int height = 720;
-    int width = 1280;
-
     /* Multiple by 1.5 because of YUV standard */
-    cv::Mat img = cv::Mat(1.5 * height, width, CV_8UC1, buffer);
+    cv::Mat img = cv::Mat(1.5 * height, width, CV_8UC1, frame->data);
     cv::cvtColor(img, img, CV_YUV420sp2RGB);
 
     // convert OpenCV image to ROS message
@@ -55,8 +49,6 @@ void imageCallback(unsigned char *buffer, int size)
     cvi.header.frame_id = "image";
     cvi.image = img;
     cvi.encoding = "rgb8";
-
-    // cvi.encoding = "bgr8";
 
     sensor_msgs::Image im;
     cvi.toImageMsg(im);
@@ -71,7 +63,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "camera");
     ros::NodeHandle nh("~");
     image_transport::ImageTransport it(nh);
-    image_pub = nh.advertise<sensor_msgs::Image>("image_raw", 1);
+    image_pub = it.advertise("image_raw", 1);
 
     /* auto, infinity, macro, continuous-video, continuous-picture, manual */
     if (!nh.getParam("focus_mode", cfg.focusMode)) {
@@ -125,29 +117,23 @@ int main(int argc, char **argv)
     /* Set resolution size */
     if (res == "4k") {
         cfg.previewSize = CameraSizes::UHDSize();
-        cfg.pictureSize = CameraSizes::UHDSize();
+        height = 2160;
+        width = 3840;
     } else if (res == "1080p") {
         cfg.previewSize = CameraSizes::FHDSize();
-        cfg.pictureSize = CameraSizes::FHDSize();
+        height = 1080;
+        width = 1920;
     } else if (res == "720p") {
         cfg.previewSize = CameraSizes::HDSize();
-        cfg.pictureSize = CameraSizes::HDSize();
+        height = 720;
+        width = 1280;
     } else if (res == "VGA") {
         cfg.previewSize = CameraSizes::VGASize();
-        cfg.pictureSize = CameraSizes::VGASize();
-    } else if (res == "QVGA") {
-        cfg.previewSize = CameraSizes::QVGASize();
-        cfg.pictureSize = CameraSizes::QVGASize();
-    } else if (res == "stereoVGA") {
-        cfg.previewSize = CameraSizes::stereoVGASize();
-        cfg.pictureSize = CameraSizes::stereoVGASize();
-    } else if (res == "stereoQVGA") {
-        cfg.previewSize = CameraSizes::stereoQVGASize();
-        cfg.pictureSize = CameraSizes::stereoQVGASize();
+        height = 480;
+        width = 640;
     } else {
         ROS_ERROR("Invalid resolution %s. Defaulting to VGA\n", res.c_str());
         cfg.previewSize = CameraSizes::stereoVGASize();
-        cfg.pictureSize = CameraSizes::stereoVGASize();
     }
 
     cfg.func = CAM_FUNC_HIRES;

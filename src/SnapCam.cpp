@@ -124,7 +124,6 @@ int SnapCam::initialize(CamConfig cfg)
     printCapabilities();
        
     params_.setPreviewSize(cfg.previewSize); 
-    params_.setVideoSize(cfg.previewSize);
     params_.setFocusMode(cfg.focusMode);
     params_.setWhiteBalance(cfg.whiteBalance);
     params_.setISO(cfg.ISO);
@@ -141,7 +140,6 @@ int SnapCam::initialize(CamConfig cfg)
 
     /* Must start preview before setting manual gain and exposure */
     camera_->startPreview();
-    camera_->startRecording();
 
     // params_.setManualGain(cfg.gain);
     // params_.setManualExposure(cfg.exposure);
@@ -159,7 +157,6 @@ int SnapCam::initialize(CamConfig cfg)
 SnapCam::~SnapCam() 
 {
     camera_->stopPreview();
-    camera_->stopRecording();
 
     /* release camera device */
     ICameraDevice::deleteInstance(&camera_);
@@ -174,7 +171,7 @@ void SnapCam::onError()
 void SnapCam::onPreviewFrame(ICameraFrame *frame) 
 {
     if (!cb_) { return; }
-    cb_(frame->data, frame->size);
+    cb_(frame);
 }
 
 int SnapCam::printCapabilities()
