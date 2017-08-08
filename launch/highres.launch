@@ -10,7 +10,7 @@
     <param name="camera_resolution" value="720p"/>
 
     <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
-    <param name="focus_mode" value="continuous-picture"/>
+    <param name="focus_mode" value="continuous-video"/>
 
     <!-- auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct -->
     <param name="white_balance" value="auto"/>

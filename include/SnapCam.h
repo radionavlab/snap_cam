@@ -126,7 +126,7 @@ public:
 
 	/* listener methods */
 	virtual void onError();
-        // virtual void onVideoFrame(ICameraFrame *frame);
+        virtual void onVideoFrame(ICameraFrame *frame);
         virtual void onPreviewFrame(ICameraFrame *frame);
 
 private:
