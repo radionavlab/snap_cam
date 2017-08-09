@@ -40,120 +40,71 @@
 using namespace std;
 using namespace camera;
 
-static uint64_t get_absolute_time();
-
 SnapCam::SnapCam(CamConfig cfg)
 {
     cb_=nullptr;
     initialize(cfg);
 }
 
-int SnapCam::findCamera(CamConfig cfg, int32_t &camera_id)
-{
-    int num_cams = camera::getNumberOfCameras();
-
-    if (num_cams < 1) {
-        printf("No cameras detected. Exiting.\n");
-        return -1;
-    }
-
-    bool found = false;
-
-    for (int i = 0; i < num_cams; ++i) {
-        camera::CameraInfo info;
-        getCameraInfo(i, info);
-        if (info.func == static_cast<int>(cfg.func)) {
-            camera_id = i;
-            found = true;
-        }
-    }
-
-    if (!found) {
-        printf("Could not find camera of type %d. Exiting", cfg.func);
-        return -1;
-    }
-
-    printf("Camera of type %d has ID = %d\n", cfg.func, camera_id);
-
-    return 0;
-}
-
 int SnapCam::initialize(CamConfig cfg)
 {
-    int rc;
-    int32_t cameraId;
-    rc = SnapCam::findCamera(cfg, cameraId);
+    printf("Begin init\n");
+    int PROBLEM_EXIT = -1;
 
-    if (rc != 0) {
-        printf("Cannot find camera Id for type: %d", cfg.func);
-        return rc;
+    // Ensure camera is connected and accessible
+    if (getNumberOfCameras() < 1) {
+        printf("No cameras detected. Are you using sudo?\n");
+        return PROBLEM_EXIT;
     }
-    cfg.cameraId = cameraId;
+    cfg.cameraId = 1;
 
-    rc = ICameraDevice::createInstance(cfg.cameraId, &camera_);
-
-    if (rc != 0) {
-        printf("Could not open camera %d\n", cfg.func);
-        return rc;
+    // Create camera device
+    if(ICameraDevice::createInstance(cfg.cameraId, &camera_) != 0) {
+        printf("Could not open camera.");
+        return PROBLEM_EXIT;
     }
 
+    // Add listener
     camera_->addListener(this);
 
-    rc = params_.init(camera_);
-
-    if (rc != 0) {
+    // Initialize camera device
+    if(params_.init(camera_) != 0) {
         printf("failed to init parameters\n");
         ICameraDevice::deleteInstance(&camera_);
-        return rc;
+        return PROBLEM_EXIT;
     }
+    printf("Middle init\n");
 
-    /* query capabilities */
-    caps_.pSizes = params_.getSupportedPreviewSizes();
-    caps_.vSizes = params_.getSupportedVideoSizes();
-    caps_.picSizes = params_.getSupportedPictureSizes();
-    caps_.focusModes = params_.getSupportedFocusModes();
-    caps_.wbModes = params_.getSupportedWhiteBalance();
-    caps_.isoModes = params_.getSupportedISO();
-    caps_.brightness = params_.getSupportedBrightness();
-    caps_.sharpness = params_.getSupportedSharpness();
-    caps_.contrast = params_.getSupportedContrast();
-    caps_.previewFpsRanges = params_.getSupportedPreviewFpsRanges();
-    caps_.videoFpsValues = params_.getSupportedVideoFps();
-    caps_.previewFormats = params_.getSupportedPreviewFormats();
-    caps_.rawSize = params_.get("raw-size");
-    printCapabilities();
-       
+    // Set the image sizes
     params_.setPreviewSize(cfg.previewSize); 
     params_.setVideoSize(cfg.previewSize); 
 
-    params_.setPreviewFpsRange(caps_.previewFpsRanges[3]);
-    params_.setVideoFPS(caps_.videoFpsValues[0]);
+    // Set image format. Pretty much only YUV420sp
+    params_.setPreviewFormat(cfg.previewFormat);
 
+    // Leave these for 60 fps
+    params_.setPreviewFpsRange(params_.getSupportedPreviewFpsRanges()[3]);
+    params_.setVideoFPS(params_.getSupportedVideoFps()[0]);
+
+    // Set picture parameters
     params_.setFocusMode(cfg.focusMode);
     params_.setWhiteBalance(cfg.whiteBalance);
     params_.setISO(cfg.ISO);
     params_.setSharpness(cfg.sharpness);
     params_.setBrightness(cfg.brightness);
     params_.setContrast(cfg.contrast);
-    params_.setPreviewFormat(cfg.previewFormat);
 
-    rc = params_.commit();
-    if (rc) {
+    if (params_.commit() != 0) {
         printf("Commit failed\n");
-        return rc;
+        return PROBLEM_EXIT;
     }
 
+    // Start the camera preview and recording. Will start pushing frames asynchronously to the callbacks
     camera_->startPreview();
     camera_->startRecording();
 
-    rc = params_.commit();
-    if (rc) {
-        printf("Commit failed\n");
-        return rc;
-    }
-
     config_ = cfg;
-
+    printf("Init done.\n");
 }
 
 SnapCam::~SnapCam() 
@@ -197,99 +148,7 @@ void SnapCam::onVideoFrame(ICameraFrame *frame)
     lastTime = currentTime;
 }
 
-int SnapCam::printCapabilities()
-{
-    printf("Camera capabilities\n");
-
-    printf("available preview sizes:\n");
-
-    for (int i = 0; i < caps_.pSizes.size(); i++) {
-        printf("%d: %d x %d\n", i, caps_.pSizes[i].width, caps_.pSizes[i].height);
-    }
-
-    printf("available video sizes:\n");
-
-    for (int i = 0; i < caps_.vSizes.size(); i++) {
-        printf("%d: %d x %d\n", i, caps_.vSizes[i].width, caps_.vSizes[i].height);
-    }
-
-    printf("available picture sizes:\n");
-
-    for (int i = 0; i < caps_.picSizes.size(); i++) {
-        printf("%d: %d x %d\n", i, caps_.picSizes[i].width, caps_.picSizes[i].height);
-    }
-
-    printf("available preview formats:\n");
-
-    for (int i = 0; i < caps_.previewFormats.size(); i++) {
-        printf("%d: %s\n", i, caps_.previewFormats[i].c_str());
-    }
-
-    printf("available focus modes:\n");
-
-    for (int i = 0; i < caps_.focusModes.size(); i++) {
-        printf("%d: %s\n", i, caps_.focusModes[i].c_str());
-    }
-
-    printf("available whitebalance modes:\n");
-
-    for (int i = 0; i < caps_.wbModes.size(); i++) {
-        printf("%d: %s\n", i, caps_.wbModes[i].c_str());
-    }
-
-    printf("available ISO modes:\n");
-
-    for (int i = 0; i < caps_.isoModes.size(); i++) {
-        printf("%d: %s\n", i, caps_.isoModes[i].c_str());
-    }
-
-    printf("available brightness values:\n");
-    printf("min=%d, max=%d, step=%d\n", caps_.brightness.min,
-           caps_.brightness.max, caps_.brightness.step);
-    printf("available sharpness values:\n");
-    printf("min=%d, max=%d, step=%d\n", caps_.sharpness.min,
-           caps_.sharpness.max, caps_.sharpness.step);
-    printf("available contrast values:\n");
-    printf("min=%d, max=%d, step=%d\n", caps_.contrast.min,
-           caps_.contrast.max, caps_.contrast.step);
-
-    printf("available preview fps ranges:\n");
-
-    for (int i = 0; i < caps_.previewFpsRanges.size(); i++) {
-        printf("%d: [%d, %d]\n", i, caps_.previewFpsRanges[i].min,
-               caps_.previewFpsRanges[i].max);
-    }
-
-    printf("available video fps values:\n");
-
-    for (int i = 0; i < caps_.videoFpsValues.size(); i++) {
-        printf("%d: %d\n", i, caps_.videoFpsValues[i]);
-    }
-
-    return 0;
-}
-
-/**
- *  FUNCTION: setListener
- *
- *  Set a listener for image callbacks
- *  The callback is provided with a cv::Mat image
- *
- * */
 void SnapCam::setListener(CallbackFunction fun)
 {
     cb_ = fun;
 }
-
-/**
- *  FUNCTION: setListener
- *
- *  Set a class member listener for image callbacks
- *  The callback is provided with a cv::Mat image
- *
- * */
-template <class T>
-void SnapCam::setListener(CallbackFunction fun, T *obj) {
-    cb_ = std::bind(fun, obj);
-}
-
