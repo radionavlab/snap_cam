@@ -127,7 +127,7 @@ int SnapCam::initialize(CamConfig cfg)
     params_.setVideoSize(cfg.previewSize); 
 
     params_.setPreviewFpsRange(caps_.previewFpsRanges[3]);
-    // params_.setVideoFPS(caps_.videoFpsValues[3]);
+    params_.setVideoFPS(caps_.videoFpsValues[0]);
 
     params_.setFocusMode(cfg.focusMode);
     params_.setWhiteBalance(cfg.whiteBalance);

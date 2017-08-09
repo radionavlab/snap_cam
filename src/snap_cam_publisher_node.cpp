@@ -34,7 +34,7 @@ CamConfig cfg;
 image_transport::Publisher image_pub;
 
 /* Camera resolution */
-int height;
+int height
 int width;
 
 void imageCallback(ICameraFrame *frame) 
@@ -63,7 +63,7 @@ int main(int argc, char **argv)
     ros::init(argc, argv, "camera");
     ros::NodeHandle nh("~");
     image_transport::ImageTransport it(nh);
-    image_pub = it.advertise("image_raw", 1);
+    image_pub = it.advertise("raw_image", 1);
 
     /* auto, infinity, macro, continuous-video, continuous-picture, manual */
     if (!nh.getParam("focus_mode", cfg.focusMode)) {
@@ -115,13 +115,14 @@ int main(int argc, char **argv)
     }
 
     /* Set resolution size */
+    // Some of these are nonstandard!
     if (res == "4k") {
         cfg.previewSize = CameraSizes::UHDSize();
         height = 2160;
         width = 3840;
     } else if (res == "1080p") {
         cfg.previewSize = CameraSizes::FHDSize();
-        height = 1080;
+        height = 1088;
         width = 1920;
     } else if (res == "720p") {
         cfg.previewSize = CameraSizes::HDSize();
@@ -143,8 +144,10 @@ int main(int argc, char **argv)
     cam.setListener(imageCallback);
 
     /* Main loop */
+    ros::Rate r(10);
     while(nh.ok()) {
         ros::spinOnce();
+        r.sleep();
     }
 
     return 0;
