@@ -7,7 +7,7 @@
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="camera" output="screen" >
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
-    <param name="camera_resolution" value="720p"/>
+    <param name="camera_resolution" value="1080p"/>
 
     <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
     <param name="focus_mode" value="continuous-video"/>

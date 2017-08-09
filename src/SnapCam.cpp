@@ -124,6 +124,11 @@ int SnapCam::initialize(CamConfig cfg)
     printCapabilities();
        
     params_.setPreviewSize(cfg.previewSize); 
+    params_.setVideoSize(cfg.previewSize); 
+
+    params_.setPreviewFpsRange(caps_.previewFpsRanges[3]);
+    // params_.setVideoFPS(caps_.videoFpsValues[3]);
+
     params_.setFocusMode(cfg.focusMode);
     params_.setWhiteBalance(cfg.whiteBalance);
     params_.setISO(cfg.ISO);
@@ -138,12 +143,8 @@ int SnapCam::initialize(CamConfig cfg)
         return rc;
     }
 
-    /* Must start preview before setting manual gain and exposure */
     camera_->startPreview();
-    // camera_->startRecording();
-
-    // params_.setManualGain(cfg.gain);
-    // params_.setManualExposure(cfg.exposure);
+    camera_->startRecording();
 
     rc = params_.commit();
     if (rc) {
@@ -157,7 +158,7 @@ int SnapCam::initialize(CamConfig cfg)
 
 SnapCam::~SnapCam() 
 {
-    // camera_->stopRecording();
+    camera_->stopRecording();
     camera_->stopPreview();
 
     /* release camera device */
@@ -179,7 +180,7 @@ void SnapCam::onPreviewFrame(ICameraFrame *frame)
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    cout << "Preview: " << currentTime - lastTime << endl;
+    cout << "Preview: " << currentTime - lastTime << ", " << frame->size << endl;
     lastTime = currentTime;
 }
 
@@ -192,7 +193,7 @@ void SnapCam::onVideoFrame(ICameraFrame *frame)
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    cout << "Video: " << currentTime - lastTime << endl;
+    cout << "Video: " << currentTime - lastTime <<", " << frame->size << endl;
     lastTime = currentTime;
 }
 

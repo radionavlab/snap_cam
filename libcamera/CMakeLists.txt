@@ -10,7 +10,8 @@ include_directories(
   ${OpenCV_INCLUDE_DIRS}
   /home/linaro/dependencies/camera/libcamera/inc
   /home/linaro/dependencies/camera/libcamera/src
-  /home/linaro/dependencies/libjpeg-turbo-1.4.2
+  # /home/linaro/dependencies/libjpeg-turbo-1.4.2
+  /home/linaro/dependencies/libjpeg-turbo
   )
 
 add_executable(cam_test camera_test.cpp)
@@ -20,6 +21,7 @@ LINK_DIRECTORIES(
   )
 
 add_library(turbojpeg SHARED IMPORTED)
-set_property(TARGET turbojpeg PROPERTY IMPORTED_LOCATION "/home/linaro/dependencies/libjpeg-turbo/.libs/libturbojpeg.so")
+# set_property(TARGET turbojpeg PROPERTY IMPORTED_LOCATION "/home/linaro/dependencies/libjpeg-turbo/.libs/libturbojpeg.so")
+set_property(TARGET turbojpeg PROPERTY IMPORTED_LOCATION "/usr/lib/libturbojpeg.so.0")
 
 TARGET_LINK_LIBRARIES(cam_test camera turbojpeg ${OpenCV_LIBS})

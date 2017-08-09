@@ -300,6 +300,7 @@ int CameraTest::initialize(int camId)
     caps_.videoFpsValues = params_.getSupportedVideoFps();
     caps_.previewFormats = params_.getSupportedPreviewFormats();
     caps_.rawSize = params_.get("raw-size");
+    printCapabilities();
 }
 
 CameraTest::~CameraTest()
@@ -308,6 +309,7 @@ CameraTest::~CameraTest()
 
 static int dumpToFile(uint8_t* data, uint32_t size, char* name, uint64_t timestamp)
 {
+    
     FILE* fp;
     fp = fopen(name, "wb");
     if (!fp) {
@@ -315,6 +317,7 @@ static int dumpToFile(uint8_t* data, uint32_t size, char* name, uint64_t timesta
         return -1;
     }
     fwrite(data, size, 1, fp);
+    
 
     static uint64_t last_ts = 0;
 
@@ -363,6 +366,7 @@ int CameraTest::takePicture()
 
 int CameraTest::compressJpegAndSave(ICameraFrame *frame, char* name)
 {
+    /*
     uint32_t jpegSize = 0;
     int jpegQuality = 90;
     uint8_t *dest = NULL;
@@ -396,8 +400,8 @@ int CameraTest::compressJpegAndSave(ICameraFrame *frame, char* name)
     uint8_t *pCrDest = crPlane;
 
     uint32_t line=0;
-
-    /* copy interleaved CbCr data to separate Cb and Cr planes */
+    
+    // copy interleaved CbCr data to separate Cb and Cr planes
     for (line=0; line < h/2; line++) {
         pCbcrSrc = frame->data + (stride * scanlines) + line*stride;
         uint32_t count = w/2;
@@ -420,7 +424,7 @@ int CameraTest::compressJpegAndSave(ICameraFrame *frame, char* name)
                             &dest, (long unsigned int *)&jpegSize, jpegQuality,
                             TJFLAG_FASTDCT);
 
-    /* save the file to disk */
+    // save the file to disk
     printf("saving JPEG image: %s\n", name);
     FILE *fp = fopen(name, "w");
     if (fp == NULL) {
@@ -436,6 +440,8 @@ exit1:
     tjDestroy(jpegCompressor);
     free(cbPlane);
     free(crPlane);
+    return 0;
+    */
     return 0;
 }
 
@@ -472,7 +478,7 @@ void CameraTest::onPreviewFrame(ICameraFrame* frame)
         }
 
         if (config_.dumpFrames == true) {
-            dumpToFile(frame->data, pSize_.width*pSize_.height, name, frame->timeStamp);
+            // dumpToFile(frame->data, pSize_.width*pSize_.height, name, frame->timeStamp);
         }
         //printf("Preview FPS = %.2f\n", pFpsAvg_);
     }
@@ -492,7 +498,7 @@ void CameraTest::onPictureFrame(ICameraFrame* frame)
         dumpToFile(frame->data, frame->size, rawName, frame->timeStamp);
     } else {
         snprintf(jpgName, 128, "snapshot_%dx%d.jpg", picSize_.width, picSize_.height);
-       dumpToFile(frame->data, frame->size, jpgName, frame->timeStamp);
+        dumpToFile(frame->data, frame->size, jpgName, frame->timeStamp);
     }
     /* notify the waiting thread about picture done */
     pthread_mutex_lock(&mutexPicDone);
@@ -516,20 +522,25 @@ void CameraTest::onPictureFrame(ICameraFrame* frame)
  */
 void CameraTest::onVideoFrame(ICameraFrame* frame)
 {
+    static int count = 0;
     if (vFrameCount_ > 0) {
         char name[50];
         snprintf(name, 50, "V_%dx%d_%04d_%llu.yuv",
                  vSize_.width, vSize_.height, vFrameCount_,frame->timeStamp);
         if (config_.dumpFrames == true) {
-            dumpToFile(frame->data, frame->size, name, frame->timeStamp);
+            if(vFrameCount_%30 == 0) {
+                dumpToFile(frame->data, frame->size, name, frame->timeStamp);
+            }
         }
-        //printf("Video FPS = %.2f\n", vFpsAvg_);
+        printf("Video FPS = %.2f\n", vFpsAvg_);
     }
 
     uint64_t diff = frame->timeStamp - vTimeStampPrev_;
     vFpsAvg_ = ((vFpsAvg_ * vFrameCount_) + (1e9 / diff)) / (vFrameCount_ + 1);
     vFrameCount_++;
     vTimeStampPrev_  = frame->timeStamp;
+
+    printf("Video frame count: %d\n", count++);
 }
 
 int CameraTest::printCapabilities()
@@ -751,7 +762,7 @@ int CameraTest::setParameters()
     int wbModeIdx = 2;
     int isoModeIdx = 0;
     int pFpsIdx = 3;
-    int vFpsIdx = 3;
+    int vFpsIdx = 0;
     int prevFmtIdx = 0;
     int rc = 0;
 
@@ -759,28 +770,14 @@ int CameraTest::setParameters()
     vSize_ = config_.vSize;
     picSize_ = config_.picSize;
 
-	switch ( config_.func ){
-		case CAM_FUNC_OPTIC_FLOW:
-			if (config_.outputFormat == RAW_FORMAT) {
-				/* Do not turn on videostream for optic flow in RAW format */
-				config_.testVideo = false;
-				printf("Setting output = RAW_FORMAT for optic flow sensor \n");
-				params_.set("preview-format", "bayer-rggb");
-				params_.set("picture-format", "bayer-mipi-10gbrg");
-				params_.set("raw-size", "640x480");
-			}
-			break;
-		case CAM_FUNC_RIGHT_SENSOR:
-			break;
-		case CAM_FUNC_STEREO:
-			break;
-		case CAM_FUNC_HIRES:
-		    if (config_.picSizeIdx != -1 ) {
-		        picSize_ = caps_.picSizes[config_.picSizeIdx];
-		        config_.picSize = picSize_;
-		    } else {
-		        picSize_ = config_.picSize;
-		    }
+    switch ( config_.func ){
+        case CAM_FUNC_HIRES:
+            if (config_.picSizeIdx != -1 ) {
+                picSize_ = caps_.picSizes[config_.picSizeIdx];
+                config_.picSize = picSize_;
+            } else {
+                picSize_ = config_.picSize;
+            }
                     if (config_.snapshotFormat == RAW_FORMAT) {
                         printf("raw picture format: %s\n",
                                "bayer-mipi-10bggr");
@@ -793,40 +790,44 @@ int CameraTest::setParameters()
                         params_.setPictureSize(picSize_);
                     }
 
-			printf("setting focus mode: %s\n",
-				 caps_.focusModes[focusModeIdx].c_str());
-			params_.setFocusMode(caps_.focusModes[focusModeIdx]);
-			printf("setting WB mode: %s\n", caps_.wbModes[wbModeIdx].c_str());
-			params_.setWhiteBalance(caps_.wbModes[wbModeIdx]);
-			printf("setting ISO mode: %s\n", caps_.isoModes[isoModeIdx].c_str());
-			params_.setISO(caps_.isoModes[isoModeIdx]);
+            printf("setting focus mode: %s\n",
+                 caps_.focusModes[focusModeIdx].c_str());
+            params_.setFocusMode(caps_.focusModes[focusModeIdx]);
+            printf("setting WB mode: %s\n", caps_.wbModes[wbModeIdx].c_str());
+            params_.setWhiteBalance(caps_.wbModes[wbModeIdx]);
+            printf("setting ISO mode: %s\n", caps_.isoModes[isoModeIdx].c_str());
+            params_.setISO(caps_.isoModes[isoModeIdx]);
 
-			printf("setting preview format: %s\n",
-				 caps_.previewFormats[prevFmtIdx].c_str());
-			params_.setPreviewFormat(caps_.previewFormats[prevFmtIdx]);
-			break;
-		default:
-			printf("invalid sensor function \n");
-			break;
-	}
+            printf("setting preview format: %s\n",
+                 caps_.previewFormats[prevFmtIdx].c_str());
+            params_.setPreviewFormat(caps_.previewFormats[prevFmtIdx]);
+            break;
+        default:
+            printf("invalid sensor function \n");
+            break;
+    }
     printf("setting preview size: %dx%d\n", pSize_.width, pSize_.height);
     params_.setPreviewSize(pSize_);
     printf("setting video size: %dx%d\n", vSize_.width, vSize_.height);
     params_.setVideoSize(vSize_);
 
-    /* Find index and set FPS  */
+    // Find index and set FP
+    /*
     rc = setFPSindex(config_.fps, pFpsIdx, vFpsIdx);
+    printf("pFPS: %d\n", pFpsIdx);
+    printf("vFPS: %d\n", vFpsIdx);
     if ( rc == -1)
     {
+        printf("Problem here!\n");
         return rc;
     }
+    */
     printf("setting preview fps range: %d, %d ( idx = %d ) \n",
     caps_.previewFpsRanges[pFpsIdx].min,
     caps_.previewFpsRanges[pFpsIdx].max, pFpsIdx);
     params_.setPreviewFpsRange(caps_.previewFpsRanges[pFpsIdx]);
     printf("setting video fps: %d ( idx = %d )\n", caps_.videoFpsValues[vFpsIdx], vFpsIdx );
     params_.setVideoFPS(caps_.videoFpsValues[vFpsIdx]);
-
 
     return params_.commit();
 }
@@ -965,7 +966,7 @@ int CameraTest::run()
 
     printf("Average preview FPS = %.2f\n", pFpsAvg_);
     if( config_.testVideo  == true )
-		printf("Average video FPS = %.2f\n", vFpsAvg_);
+        printf("Average video FPS = %.2f\n", vFpsAvg_);
 
 del_camera:
     /* release camera device */
