@@ -4,7 +4,7 @@
 <!--
   <node pkg="snap_cam" type="snap_cam_publisher_node" name="snap_cam_highres_publisher" output="screen" launch-prefix="/home/linaro/ws/src/snap_cam/launch/run_tmux" />
 -->
-  <node pkg="snap_cam" type="snap_cam_publisher_node" name="camera" output="screen" >
+  <node pkg="snap_cam" type="snap_cam_exec" name="camera" output="screen" >
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
     <param name="camera_resolution" value="1080p"/>

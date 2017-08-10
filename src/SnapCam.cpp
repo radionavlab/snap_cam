@@ -122,30 +122,25 @@ void SnapCam::onError()
     exit(EXIT_FAILURE);
 }
 
-void SnapCam::onPreviewFrame(ICameraFrame *frame) 
-{
-    if (!cb_) { return; }
-    // cb_(frame);
-
-    static long long lastTime = 0;
-    struct timeval tp;
-    gettimeofday(&tp, NULL);
-    long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    cout << "Preview: " << currentTime - lastTime << ", " << frame->size << endl;
-    lastTime = currentTime;
-}
+void SnapCam::onPreviewFrame(ICameraFrame *frame) {}
 
 void SnapCam::onVideoFrame(ICameraFrame *frame) 
 {
-    if (!cb_) { return; }
-    // cb_(frame);
+    static uint32_t count = 0;
 
+    if (!cb_) { return; }
+    if(count++ % 10 == 0) {
+        cb_(frame);
+    }
+    
+    /*
     static long long lastTime = 0;
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
     cout << "Video: " << currentTime - lastTime <<", " << frame->size << endl;
     lastTime = currentTime;
+    */
 }
 
 void SnapCam::setListener(CallbackFunction fun)

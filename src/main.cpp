@@ -24,7 +24,6 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CompressedImage.h>
-#include <image_transport/image_transport.h>
 
 #include "SnapCam.h"
 
@@ -32,7 +31,7 @@
 CamConfig cfg;
 
 /* Image Publisher */
-image_transport::Publisher image_pub;
+ros::Publisher image_pub;
 
 /* Camera resolution */
 int height;
@@ -40,22 +39,31 @@ int width;
 
 void imageCallback(ICameraFrame *frame) 
 {
+    static int seq = 0;
+
+    // Convert YUV to RGB
     /* Multiple by 1.5 because of YUV standard */
     cv::Mat img = cv::Mat(1.5 * height, width, CV_8UC1, frame->data);
     cv::cvtColor(img, img, CV_YUV420sp2RGB);
 
-    // convert OpenCV image to ROS message
-    cv_bridge::CvImage cvi;
-    cvi.header.stamp = ros::Time::now();
-    cvi.header.frame_id = "image";
-    cvi.image = img;
-    cvi.encoding = "rgb8";
-
-    sensor_msgs::Image im;
-    cvi.toImageMsg(im);
-    image_pub.publish(im);
-
+    // Compress to JPEG
+    std::vector<uint8_t> buff;//buffer for coding
+    std::vector<int> param(2);
+    param[0] = cv::IMWRITE_JPEG_QUALITY;
+    param[1] = 100;
+    cv::imencode(".jpg", img, buff, param);
     img.release();
+
+    // Compress ros message
+    sensor_msgs::CompressedImage im;
+    im.format="jpeg";
+    im.data = buff;
+    im.header.seq = seq++;
+    im.header.stamp=ros::Time::now();
+    im.header.frame_id="";
+
+    // Publish
+    image_pub.publish(im);
 }
 
 int main(int argc, char **argv)
@@ -63,8 +71,7 @@ int main(int argc, char **argv)
     /* Ros init */
     ros::init(argc, argv, "camera");
     ros::NodeHandle nh("~");
-    image_transport::ImageTransport it(nh);
-    image_pub = it.advertise("raw_image", 1);
+    image_pub = nh.advertise<sensor_msgs::CompressedImage>("image/compressed", 1);
 
     if (!nh.getParam("focus_mode", cfg.focusMode)) {
         cfg.focusMode="auto";
