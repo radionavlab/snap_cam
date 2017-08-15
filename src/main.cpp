@@ -2,6 +2,7 @@
 *
 *  Created on: Mar 16, 2016
 *      Author: Nicolas
+*      Modified: Tucker Haydon
 */
 
 #include <cstdio>
@@ -23,7 +24,6 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CompressedImage.h>
-#include <image_transport/image_transport.h>
 
 #include "SnapCam.h"
 
@@ -31,30 +31,39 @@
 CamConfig cfg;
 
 /* Image Publisher */
-image_transport::Publisher image_pub;
+ros::Publisher image_pub;
 
 /* Camera resolution */
-int height
+int height;
 int width;
 
 void imageCallback(ICameraFrame *frame) 
 {
+    static int seq = 0;
+
+    // Convert YUV to RGB
     /* Multiple by 1.5 because of YUV standard */
     cv::Mat img = cv::Mat(1.5 * height, width, CV_8UC1, frame->data);
     cv::cvtColor(img, img, CV_YUV420sp2RGB);
 
-    // convert OpenCV image to ROS message
-    cv_bridge::CvImage cvi;
-    cvi.header.stamp = ros::Time::now();
-    cvi.header.frame_id = "image";
-    cvi.image = img;
-    cvi.encoding = "rgb8";
-
-    sensor_msgs::Image im;
-    cvi.toImageMsg(im);
-    image_pub.publish(im);
-
+    // Compress to JPEG
+    std::vector<uint8_t> buff;//buffer for coding
+    std::vector<int> param(2);
+    param[0] = cv::IMWRITE_JPEG_QUALITY;
+    param[1] = 100;
+    cv::imencode(".jpg", img, buff, param);
     img.release();
+
+    // Compress ros message
+    sensor_msgs::CompressedImage im;
+    im.format="jpeg";
+    im.data = buff;
+    im.header.seq = seq++;
+    im.header.stamp=ros::Time::now();
+    im.header.frame_id="";
+
+    // Publish
+    image_pub.publish(im);
 }
 
 int main(int argc, char **argv)
@@ -62,52 +71,43 @@ int main(int argc, char **argv)
     /* Ros init */
     ros::init(argc, argv, "camera");
     ros::NodeHandle nh("~");
-    image_transport::ImageTransport it(nh);
-    image_pub = it.advertise("raw_image", 1);
+    image_pub = nh.advertise<sensor_msgs::CompressedImage>("image/compressed", 1);
 
-    /* auto, infinity, macro, continuous-video, continuous-picture, manual */
     if (!nh.getParam("focus_mode", cfg.focusMode)) {
         cfg.focusMode="auto";
         ROS_WARN("Defaulting to auto focus mode.");
     }
 
-    /* auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct */
     if (!nh.getParam("white_balance", cfg.whiteBalance)) {
         cfg.whiteBalance="auto";
         ROS_WARN("Defaulting to auto white balance.");
     }
 
-    /* auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 */
     if (!nh.getParam("iso", cfg.ISO)) {
         cfg.ISO="auto";
         ROS_WARN("Defaulting to auto ISO.");
     }
 
-    /* yuv420sp, yuv420p, nv12-venus, bayer-rggb */
     if (!nh.getParam("preview_format", cfg.previewFormat)) {
         cfg.previewFormat="yuv420sp";
         ROS_WARN("Defaulting to yuv420sp preview format.");
     }
 
-    /* 1-6 in increments of 1 */
     if (!nh.getParam("brightness", cfg.brightness)) {
         cfg.brightness=3;
         ROS_WARN("Defaulting to 3 brightness");
     }
 
-    /* 0-36 in increments of 6 */
     if (!nh.getParam("sharpness", cfg.sharpness)) {
         cfg.sharpness=18;
         ROS_WARN("Defaulting to 18 sharpness");
     }
 
-    /* 1-10 in increments of 1 */
     if (!nh.getParam("contrast", cfg.contrast)) {
         cfg.contrast=5;
         ROS_WARN("Defaulting to 5 contrast.");
     }
 
-    /* QVGA, VGA, 720p, 1080p, 4k */
     std::string res;
     if (!nh.getParam("camera_resolution", res)) {
         res = "VGA";
@@ -137,6 +137,7 @@ int main(int argc, char **argv)
         cfg.previewSize = CameraSizes::stereoVGASize();
     }
 
+    // Only using hires camera
     cfg.func = CAM_FUNC_HIRES;
         
     /* Program start */

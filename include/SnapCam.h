@@ -112,7 +112,6 @@ typedef std::function<void(ICameraFrame *frame)> CallbackFunction;
  *
  * inherits ICameraListers which provides core functionality
  */
-
 class SnapCam : ICameraListener
 {
 public:
@@ -121,8 +120,6 @@ public:
 	~SnapCam();
 
 	void setListener(CallbackFunction fun);  // register a function callback
-	template <class T>
-	void setListener(CallbackFunction fun, T *obj);  //register a function callback that is a class member
 
 	/* listener methods */
 	virtual void onError();
@@ -136,10 +133,6 @@ private:
 	CameraParams params_;
 	CameraCaps caps_;
 	CamConfig config_;
-
-	int printCapabilities();
-	int findCamera(CamConfig cfg, int32_t &camera_id);
-
 	CallbackFunction cb_;
 };
 
