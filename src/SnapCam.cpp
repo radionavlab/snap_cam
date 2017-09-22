@@ -48,7 +48,6 @@ SnapCam::SnapCam(CamConfig cfg)
 
 int SnapCam::initialize(CamConfig cfg)
 {
-    printf("Begin init\n");
     int PROBLEM_EXIT = -1;
 
     // Ensure camera is connected and accessible
@@ -73,7 +72,6 @@ int SnapCam::initialize(CamConfig cfg)
         ICameraDevice::deleteInstance(&camera_);
         return PROBLEM_EXIT;
     }
-    printf("Middle init\n");
 
     // Set the image sizes
     params_.setPreviewSize(cfg.previewSize); 
@@ -104,7 +102,6 @@ int SnapCam::initialize(CamConfig cfg)
     camera_->startRecording();
 
     config_ = cfg;
-    printf("Init done.\n");
 }
 
 SnapCam::~SnapCam() 
@@ -130,17 +127,16 @@ void SnapCam::onVideoFrame(ICameraFrame *frame)
 
     if (!cb_) { return; }
     if(count++ % 10 == 0) {
+        // TODO Spawn a new thread for the callback
         cb_(frame);
     }
     
-    /*
     static long long lastTime = 0;
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    cout << "Video: " << currentTime - lastTime <<", " << frame->size << endl;
+    cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
     lastTime = currentTime;
-    */
 }
 
 void SnapCam::setListener(CallbackFunction fun)

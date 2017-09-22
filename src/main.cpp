@@ -19,6 +19,12 @@
 #include <opencv2/opencv.hpp>
 #include <typeinfo>
 #include <vector>
+#include <sys/stat.h>
+#include <ctime>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <iomanip>
 
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
@@ -37,7 +43,38 @@ ros::Publisher image_pub;
 int height;
 int width;
 
-void imageCallback(ICameraFrame *frame) 
+/* Save Directory for images */
+std::string save_directory;
+
+void writer(ICameraFrame *frame) 
+{
+    static int seq = 0;
+
+    // Convert YUV to RGB
+    /* Multiple by 1.5 because of YUV standard */
+    cv::Mat img = cv::Mat(1.5 * height, width, CV_8UC1, frame->data);
+    cv::cvtColor(img, img, CV_YUV420sp2RGB);
+
+    // Compress to JPEG
+    std::vector<uint8_t> buff;//buffer for coding
+    std::vector<int> param(2);
+    param[0] = cv::IMWRITE_JPEG_QUALITY;
+    param[1] = 100;
+    cv::imencode(".jpg", img, buff, param);
+    img.release();
+
+    // Write
+    std::stringstream ss;
+    ss << std::setw(5) << std::setfill('0') << seq;
+    std::string filename = save_directory + "frame" + ss.str() + ".jpg";
+    std::ofstream savefile(filename.c_str(), ios::out | ios::binary);
+    savefile.write((const char*)&buff[0], buff.size());
+    savefile.close();
+
+    seq++;
+}
+
+void publisher(ICameraFrame *frame) 
 {
     static int seq = 0;
 
@@ -58,12 +95,14 @@ void imageCallback(ICameraFrame *frame)
     sensor_msgs::CompressedImage im;
     im.format="jpeg";
     im.data = buff;
-    im.header.seq = seq++;
+    im.header.seq = seq;
     im.header.stamp=ros::Time::now();
     im.header.frame_id="";
 
     // Publish
     image_pub.publish(im);
+
+    seq++;
 }
 
 int main(int argc, char **argv)
@@ -114,6 +153,36 @@ int main(int argc, char **argv)
         ROS_WARN("No resolution parameter provided. Defaulting to %s.", res.c_str());
     }
 
+    std::string base_directory;
+    if (!nh.getParam("base_directory", base_directory)) {
+        base_directory = "/home/linaro/";
+        ROS_WARN("No save directory provided. Defaulting to home directory.");
+    }
+
+    /* Make a directory for all of the images */
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    std::string year = std::to_string(1900 + ltm->tm_year);
+    std::string month = std::to_string(1 + ltm->tm_mon);
+    std::string day = std::to_string(ltm->tm_mday);
+    std::string hour = std::to_string(ltm->tm_hour);
+    std::string min = std::to_string(ltm->tm_min);
+    std::string sec = std::to_string(ltm->tm_sec);
+    std::string dir = year + "-" + month + "-" + day + "-" + hour + "-" + min + "-" + sec + "/";
+    save_directory = base_directory + dir;
+    std::cout << save_directory << std::endl;
+    const int dir_err = mkdir(save_directory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    if (-1 == dir_err){
+        ROS_WARN("Error creating directory!");
+        exit(1);
+    }
+
+    std::string callback_mode;
+    if (!nh.getParam("callback_mode", callback_mode)) {
+        callback_mode = "publish";
+        ROS_WARN("No callback_mode provided. Defaulting to publishing.");
+    }
+
     /* Set resolution size */
     // Some of these are nonstandard!
     if (res == "4k") {
@@ -142,7 +211,13 @@ int main(int argc, char **argv)
         
     /* Program start */
     SnapCam cam(cfg);
-    cam.setListener(imageCallback);
+
+    /* Set the callback mode */
+    if(callback_mode == "write") {
+        cam.setListener(writer);
+    } else {
+        cam.setListener(publisher);
+    }
 
     /* Main loop */
     ros::Rate r(10);

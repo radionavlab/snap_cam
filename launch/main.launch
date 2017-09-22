@@ -36,5 +36,11 @@
     <!-- gain: integer between 0 and 255 -->
     <param name="gain" value="50"/>
 
+    <!-- base_directory: where to save the images  -->
+    <param name="base_directory" value="/mnt/sdcard/images/"/>
+
+    <!-- callback_mode: publish, write -->
+    <param name="callback_mode" value="write"/>
+
     </node>
 </launch>
