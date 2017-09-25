@@ -126,10 +126,8 @@ void SnapCam::onVideoFrame(ICameraFrame *frame)
     static uint32_t count = 0;
 
     if (!cb_) { return; }
-    if(count++ % 10 == 0) {
-        // TODO Spawn a new thread for the callback
-        cb_(frame);
-    }
+    frame->acquireRef();
+    std::thread(cb_, frame).detach();
     
     static long long lastTime = 0;
     struct timeval tp;

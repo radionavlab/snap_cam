@@ -35,6 +35,7 @@
 #include <mutex>
 #include <vector>
 #include <sstream>
+#include <thread>
 
 #include <unistd.h>
 #include <pthread.h>

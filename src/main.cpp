@@ -25,6 +25,7 @@
 #include <fstream>
 #include <sstream>
 #include <iomanip>
+#include <atomic>
 
 #include <ros/ros.h>
 #include <cv_bridge/cv_bridge.h>
@@ -32,6 +33,8 @@
 #include <sensor_msgs/CompressedImage.h>
 
 #include "SnapCam.h"
+
+std::atomic<bool> is_writing{false};
 
 /* Camera parameters */
 CamConfig cfg;
@@ -48,6 +51,13 @@ std::string save_directory;
 
 void writer(ICameraFrame *frame) 
 {
+    if(is_writing == true) {
+        frame->releaseRef();
+        return;
+    } else {
+        is_writing = true;
+    }
+
     static int seq = 0;
 
     // Convert YUV to RGB
@@ -72,6 +82,8 @@ void writer(ICameraFrame *frame)
     savefile.close();
 
     seq++;
+    is_writing = false;
+    frame->releaseRef();
 }
 
 void publisher(ICameraFrame *frame) 
