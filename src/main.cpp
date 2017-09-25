@@ -187,7 +187,7 @@ int main(int argc, char **argv)
     // Some of these are nonstandard!
     if (res == "4k") {
         cfg.previewSize = CameraSizes::UHDSize();
-        height = 2160;
+        height = 2176;
         width = 3840;
     } else if (res == "1080p") {
         cfg.previewSize = CameraSizes::FHDSize();
