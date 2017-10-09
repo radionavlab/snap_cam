@@ -66,11 +66,14 @@ void writer(ICameraFrame *frame)
     // Write
     std::stringstream ss;
     ss << std::setw(5) << std::setfill('0') << seq;
-    std::string filename = save_directory + "frame" + ss.str() + ".jpg";
-    std::ofstream savefile(filename.c_str(), ios::out | ios::binary);
+    std::string filename = "frame" + ss.str() + ".jpg";
+    std::string fullPath = save_directory + filename;
+    std::ofstream savefile(fullPath.c_str(), ios::out | ios::binary);
     savefile.write((const char*)&buff[0], buff.size());
     savefile.close();
 
+    std::string command = "echo '" + filename + " 1 2 3 4 5 6' >> " + save_directory + "/image_poses.txt";
+    std::system(command.c_str());
     seq++;
 }
 

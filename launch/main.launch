@@ -7,7 +7,7 @@
   <node pkg="snap_cam" type="snap_cam_exec" name="camera" output="screen" >
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
-    <param name="camera_resolution" value="4k"/>
+    <param name="camera_resolution" value="1080p"/>
 
     <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
     <param name="focus_mode" value="continuous-video"/>
@@ -37,7 +37,7 @@
     <param name="gain" value="50"/>
 
     <!-- base_directory: where to save the images. Make sure this is an absolute path and that it ends in the forward-slash  -->
-    <param name="base_directory" value="/mnt/sdcard/images/"/>
+    <param name="base_directory" value="/mnt/storage/images/"/>
 
     <!-- callback_mode: publish, write -->
     <param name="callback_mode" value="write"/>
