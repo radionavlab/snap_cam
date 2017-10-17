@@ -38,6 +38,18 @@
 
 std::atomic<bool> is_writing{false};
 
+// Precise Position Solution in ECEF coordinates
+// Position is in meters
+// Pose is in radians
+struct PPSolution {
+    std::atomic<double> x;
+    std::atomic<double> y;
+    std::atomic<double> z;
+
+    std::atomic<double> azimuth;
+    std::atomic<double> elevation;
+} solution;
+
 /* Camera parameters */
 CamConfig cfg;
 
@@ -151,6 +163,8 @@ void attitudeMessageHandler(const ppfusion_msgs::Attitude2D msg) {
     const uint8_t numDD = msg.numDD;
     const uint8_t bitfield = msg.bitfield;
 
+    solution.elevation = elAngle;
+    solution.azimuth = azAngle;
 }
 
 void positionMessageHandler(const ppfusion_msgs::SingleBaselineRTK msg) {
@@ -169,9 +183,9 @@ void positionMessageHandler(const ppfusion_msgs::SingleBaselineRTK msg) {
     const uint8_t numDD = msg.numDD;
     const uint8_t bitfield = msg.bitfield;
 
-    std::cout << std::setprecision(20) << "[" << rxRov << ", "<< ryRov << ", " << rzRov << "]" << std::endl;
-    std::cout << std::setprecision(20) << "[" << rx + rxRov << ", "<< ry + ryRov << ", " << rz + rzRov << "]" << std::endl;
-    std::cout << std::endl;
+    solution.x = rxRov;
+    solution.y = ryRov;
+    solution.z = rzRov;
 }
 
 int main(int argc, char **argv)
@@ -310,6 +324,10 @@ int main(int argc, char **argv)
     while(nh.ok()) {
         ros::spinOnce();
         r.sleep();
+
+        std::cout << std::setprecision(20) << "[" << solution.x / 1000.0 << ", "<< solution.y / 1000.0 << ", " << solution.z / 1000.0 << "]" << std::endl;
+        std::cout << std::setprecision(20) << "[" << solution.elevation << ", "<< solution.azimuth << "]" << std::endl;
+        std::cout << std::endl;
     }
 
     return 0;
