@@ -72,6 +72,7 @@ void writer(ICameraFrame *frame)
     savefile.write((const char*)&buff[0], buff.size());
     savefile.close();
 
+    // Write to the info file
     std::string command = "echo '" + filename + " 1 2 3 4 5 6' >> " + save_directory + "/image_poses.txt";
     std::system(command.c_str());
     seq++;
@@ -108,13 +109,37 @@ void publisher(ICameraFrame *frame)
     seq++;
 }
 
+void attitudeMessageHandler(const ppfusion_msgs::Attitude2D msg) {
+    ROS_INFO("Attitude message recieved!");
+}
+
+void positionMessageHandler(const ppfusion_msgs::SingleBaselineRTK msg) {
+    ROS_INFO("Position message recieved!");
+}
+
 int main(int argc, char **argv)
 {
     /* Ros init */
     ros::init(argc, argv, "camera");
     ros::NodeHandle nh("~");
-    image_pub = nh.advertise<sensor_msgs::CompressedImage>("image/compressed", 1);
 
+    std::string attitudeTopic;
+    if (!nh.getParam("attitude_topic", attitudeTopic)) {
+        ROS_WARN("No attitude topic! Exiting!");
+        exit(1);
+    }
+
+    std::string positionTopic;
+    if (!nh.getParam("position_topic", attitudeTopic)) {
+        ROS_WARN("No position topic! Exiting!");
+        exit(1);
+    }
+
+    // Subscribers for precise positioning information
+    ros::Subscriber attitudeSubscriber = nh.subscribe(attitudeTopic, 1, attitudeMessageHandler);
+    ros::Subscriber positionSubscriber = nh.subscribe(positionTopic, 1, positionMessageHandler);
+
+    /* CAMERA PARAMS */
     if (!nh.getParam("focus_mode", cfg.focusMode)) {
         cfg.focusMode="auto";
         ROS_WARN("Defaulting to auto focus mode.");
@@ -219,6 +244,7 @@ int main(int argc, char **argv)
     if(callback_mode == "write") {
         cam.setListener(writer);
     } else {
+        image_pub = nh.advertise<sensor_msgs::CompressedImage>("image/compressed", 1);
         cam.setListener(publisher);
     }
 
