@@ -128,13 +128,6 @@ void SnapCam::onVideoFrame(ICameraFrame *frame)
     if (!cb_) { return; }
     frame->acquireRef();
     std::thread(cb_, frame).detach();
-    
-    static long long lastTime = 0;
-    struct timeval tp;
-    gettimeofday(&tp, NULL);
-    long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
-    lastTime = currentTime;
 }
 
 void SnapCam::setListener(CallbackFunction fun)

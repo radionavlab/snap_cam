@@ -31,6 +31,8 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CompressedImage.h>
+#include <ppfusion_msgs/Attitude2D.h>
+#include <ppfusion_msgs/SingleBaselineRTK.h>
 
 #include "SnapCam.h"
 
@@ -58,7 +60,16 @@ void writer(ICameraFrame *frame)
         is_writing = true;
     }
 
-    static int seq = 0;
+    // Write the FPS
+    static long long lastTime = 0;
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
+    cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
+    lastTime = currentTime;
+
+    // Sequence number of images. Increments for every image
+    static uint32_t seq = 0;
 
     // Convert YUV to RGB
     /* Multiple by 1.5 because of YUV standard */
@@ -122,11 +133,45 @@ void publisher(ICameraFrame *frame)
 }
 
 void attitudeMessageHandler(const ppfusion_msgs::Attitude2D msg) {
-    ROS_INFO("Attitude message recieved!");
+    const double rx = msg.rx;
+    const double ry = msg.ry;
+    const double rz = msg.rz;
+    const double rxRov = msg.rxRov;
+    const double ryRov = msg.ryRov;
+    const double rzRov = msg.rzRov;
+    const ppfusion_msgs::BaseTime tSolution = msg.tSolution;
+    const double deltRSec = msg.deltRSec;
+    const std::vector<float> P = msg.P;
+    const uint32_t nCov = msg.nCov;
+    const double azAngle = msg.azAngle;
+    const double elAngle = msg.elAngle;
+    const double azSigma = msg.azAngle;
+    const double elSigma = msg.elSigma;
+    const double testStat = msg.testStat;
+    const uint8_t numDD = msg.numDD;
+    const uint8_t bitfield = msg.bitfield;
+
 }
 
 void positionMessageHandler(const ppfusion_msgs::SingleBaselineRTK msg) {
-    ROS_INFO("Position message recieved!");
+    const double rx = msg.rx;
+    const double ry = msg.ry;
+    const double rz = msg.rz;
+    const double rxRov = msg.rxRov;
+    const double ryRov = msg.ryRov;
+    const double rzRov = msg.rzRov;
+    const ppfusion_msgs::BaseTime tSolution = msg.tSolution;
+    const double deltRSec = msg.deltRSec;
+    const std::vector<float> P = msg.P;
+    const uint32_t nCov = msg.nCov;
+    const double testStat = msg.testStat;
+    const double ageOfReferenceData = msg.ageOfReferenceData;
+    const uint8_t numDD = msg.numDD;
+    const uint8_t bitfield = msg.bitfield;
+
+    std::cout << std::setprecision(20) << "[" << rxRov << ", "<< ryRov << ", " << rzRov << "]" << std::endl;
+    std::cout << std::setprecision(20) << "[" << rx + rxRov << ", "<< ry + ryRov << ", " << rz + rzRov << "]" << std::endl;
+    std::cout << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -142,7 +187,7 @@ int main(int argc, char **argv)
     }
 
     std::string positionTopic;
-    if (!nh.getParam("position_topic", attitudeTopic)) {
+    if (!nh.getParam("position_topic", positionTopic)) {
         ROS_WARN("No position topic! Exiting!");
         exit(1);
     }
@@ -261,7 +306,7 @@ int main(int argc, char **argv)
     }
 
     /* Main loop */
-    ros::Rate r(10);
+    ros::Rate r(20);
     while(nh.ok()) {
         ros::spinOnce();
         r.sleep();
