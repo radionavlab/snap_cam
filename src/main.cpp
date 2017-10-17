@@ -106,7 +106,8 @@ void writer(ICameraFrame *frame)
     savefile.close();
 
     // Write to the info file
-    std::string command = "echo '" + filename + " 1 2 3 4 5 6' >> " + save_directory + "/image_poses.txt";
+    std::string data = "" + std::to_string(solution.x) + " " + std::to_string(solution.y) + " " + std::to_string(solution.z) + " " + "0" + " " + std::to_string(solution.elevation) + " " + std::to_string(solution.azimuth);
+    std::string command = "echo '" + filename + " " + data + "' >> " + save_directory + "/image_poses.txt";
     std::system(command.c_str());
     seq++;
     is_writing = false;
@@ -324,10 +325,6 @@ int main(int argc, char **argv)
     while(nh.ok()) {
         ros::spinOnce();
         r.sleep();
-
-        std::cout << std::setprecision(20) << "[" << solution.x / 1000.0 << ", "<< solution.y / 1000.0 << ", " << solution.z / 1000.0 << "]" << std::endl;
-        std::cout << std::setprecision(20) << "[" << solution.elevation << ", "<< solution.azimuth << "]" << std::endl;
-        std::cout << std::endl;
     }
 
     return 0;
