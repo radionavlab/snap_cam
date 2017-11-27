@@ -1,41 +1,29 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(snap_cam)
+set(TARGET snap_cam_exec)
 set(CMAKE_BUILD_TYPE Debug)
-# check if this is being built as a ROS package
-if (CATKIN_DEVEL_PREFIX)
-    set(CATKIN_BUILD 1)
-    message(STATUS "Building ${PROJECT_NAME} with catkin")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DCATKIN_BUILD")
-else()
-    set(CATKIN_BUILD 0)
-    message(STATUS "Building ${PROJECT_NAME} without catkin")
-endif()
 
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -Wno-format-security -Wno-literal-suffix")
 
 find_package(OpenCV REQUIRED)
 
-if(CATKIN_BUILD)
-    ## Find catkin macros and libraries
-    ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-    ## is used, also find other catkin packages
-    find_package(catkin REQUIRED COMPONENTS
-      cv_bridge
-      image_transport
-      roscpp
-      rospy
-      sensor_msgs
-      std_msgs
-      mavlink
-    )
+find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
+  image_transport
+  roscpp
+  rospy
+  sensor_msgs
+  std_msgs
+  mavlink
+  gbx_ros_bridge_msgs
+)
 
-    catkin_package(
-      INCLUDE_DIRS include
-      LIBRARIES snap_cam
-    #  CATKIN_DEPENDS catkin_lib
-      DEPENDS yaml-cpp
-    )
-endif()
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES snap_cam
+  CATKIN_DEPENDS gbx_ros_bridge_msgs
+  DEPENDS yaml-cpp
+)
 
 
 include_directories(
@@ -66,9 +54,9 @@ if (camera_LIBRARIES)
 endif()
 
 # add the ROS executables
-if(CATKIN_BUILD)
-    if (camera_LIBRARIES)
-        add_executable(snap_cam_exec src/main.cpp)
-        target_link_libraries(snap_cam_exec yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
-    endif()
+if (camera_LIBRARIES)
+    add_executable(${TARGET} src/main.cpp)
+    target_link_libraries(${TARGET} yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
 endif()
+
+add_dependencies(${TARGET} gbx_ros_bridge_msgs_gencpp)

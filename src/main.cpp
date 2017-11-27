@@ -31,8 +31,8 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CompressedImage.h>
-#include <ppfusion_msgs/Attitude2D.h>
-#include <ppfusion_msgs/SingleBaselineRTK.h>
+#include <gbx_ros_bridge_msgs/Attitude2D.h>
+#include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
 
 #include "SnapCam.h"
 
@@ -145,14 +145,14 @@ void publisher(ICameraFrame *frame)
     seq++;
 }
 
-void attitudeMessageHandler(const ppfusion_msgs::Attitude2D msg) {
+void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
     const double rx = msg.rx;
     const double ry = msg.ry;
     const double rz = msg.rz;
     const double rxRov = msg.rxRov;
     const double ryRov = msg.ryRov;
     const double rzRov = msg.rzRov;
-    const ppfusion_msgs::BaseTime tSolution = msg.tSolution;
+    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
     const double deltRSec = msg.deltRSec;
     const std::vector<float> P = msg.P;
     const uint32_t nCov = msg.nCov;
@@ -168,14 +168,14 @@ void attitudeMessageHandler(const ppfusion_msgs::Attitude2D msg) {
     solution.azimuth = azAngle;
 }
 
-void positionMessageHandler(const ppfusion_msgs::SingleBaselineRTK msg) {
+void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
     const double rx = msg.rx;
     const double ry = msg.ry;
     const double rz = msg.rz;
     const double rxRov = msg.rxRov;
     const double ryRov = msg.ryRov;
     const double rzRov = msg.rzRov;
-    const ppfusion_msgs::BaseTime tSolution = msg.tSolution;
+    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
     const double deltRSec = msg.deltRSec;
     const std::vector<float> P = msg.P;
     const uint32_t nCov = msg.nCov;
