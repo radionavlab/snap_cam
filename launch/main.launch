@@ -37,7 +37,7 @@
     <param name="gain" value="50"/>
 
     <!-- base_directory: where to save the images. Make sure this is an absolute path and that it ends in the forward-slash  -->
-    <param name="base_directory" value="/home/linaro/images/"/>
+    <param name="base_directory" value="/mnt/storage/images/"/>
 
     <!-- callback_mode: publish, write -->
     <param name="callback_mode" value="write"/>
