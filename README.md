@@ -1,5 +1,5 @@
 # Snapdragon: Camera driver
-This package provides tools to work with the Snapdragon Flight cameras. This package is a fork of the original [PX4/Snap_Cam repository](https://github.com/PX4/snap_cam).
+This package provides tools to work with the Snapdragon Flight cameras. This package is a fork of the original [PX4/Snap_Cam](https://github.com/PX4/snap_cam) repository.
 
 ## Install Dependencies
 Install the dependencies
@@ -47,9 +47,9 @@ Build:
 ```sh
 cd ~/catkin_ws
 catkin_make
+```
 
-## Image publisher node
-Once your catkin workspace is built and sourced you can start the image publisher using
+## Run Snap Cam
 ```sh
 roslaunch snap_cam main.launch
 ```
