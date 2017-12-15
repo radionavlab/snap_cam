@@ -14,7 +14,7 @@ void writer(ICameraFrame *frame)
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
+    // cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
     lastTime = currentTime;
 
     // Sequence number of images. Increments for every image
@@ -44,27 +44,35 @@ void writer(ICameraFrame *frame)
 
     // Calculate ECEF position of the camera
     Eigen::Matrix<long double, 3, 1> reference_ECEF;
-    reference_ECEF <<   0.0,
-                        0.0,
-                        0.0;
+    reference_ECEF <<   solution.referenceX,
+                        solution.referenceY,
+                        solution.referenceZ;
 
     Eigen::Matrix<long double, 3, 1> primary_antenna_to_reference_ECEF;
-    primary_antenna_to_reference_ECEF <<    0.0,
-                                            0.0,
-                                            0.0;
-
-    Eigen::Matrix<long double, 3, 1> camera_body;
-    camera_body <<  0.0,
-                    10.0,
-                    0.0;
+    primary_antenna_to_reference_ECEF <<    solution.roverX,
+                                            solution.roverY,
+                                            solution.roverZ;
 
     const long double azimuth = solution.azimuth;
     const long double elevation = solution.elevation;
 
-    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(reference_ECEF, primary_antenna_to_reference_ECEF, camera_body, azimuth, elevation);
+    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(reference_ECEF, primary_antenna_to_reference_ECEF, camera_position, azimuth, elevation);
 
     // Write to the info file
-    std::string data = "" + std::to_string(camera(0,0)) + " " + std::to_string(camera(1,0)) + " " + std::to_string(camera(2,0)) + " " + "0" + " " + std::to_string(solution.elevation - M_PI/6) + " " + std::to_string(solution.azimuth);
+    std::string data = "" + 
+        std::to_string(camera(0,0)) + " " + 
+        std::to_string(camera(1,0)) + " " + 
+        std::to_string(camera(2,0)) + " " + 
+        "0" + " " + 
+        std::to_string(solution.elevation - M_PI/6) + " " + 
+        std::to_string(solution.azimuth);
+
+
+    Eigen::IOFormat CommaInitFmt(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", " << ", ";");
+
+    std::cout << (reference_ECEF + primary_antenna_to_reference_ECEF).format(CommaInitFmt) << std::endl;
+    std::cout << camera.format(CommaInitFmt) << std::endl << std::endl;
+
     std::string command = "echo '" + filename + " " + data + "' >> " + save_directory + "/image_poses.txt";
     std::system(command.c_str());
     seq++;
@@ -219,6 +227,16 @@ int main(int argc, char **argv)
         ROS_ERROR("Invalid resolution %s. Defaulting to VGA\n", res.c_str());
         cfg.previewSize = CameraSizes::stereoVGASize();
     }
+
+    /* Position of the camera with respect to primary antenna in body frame */
+    std::vector<double> camera_coordinates;
+    if (!nh.getParam("camera_coordinates", camera_coordinates)) {
+        camera_coordinates = {0.0, 0.0, 0.0};
+        ROS_WARN("No camera coordinates. Setting to zeros.");
+    }
+    camera_position <<  camera_coordinates[0],
+                        camera_coordinates[1],
+                        camera_coordinates[2];
 
     // Only using hires camera
     cfg.func = CAM_FUNC_HIRES;

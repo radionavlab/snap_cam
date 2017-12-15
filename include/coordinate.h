@@ -106,8 +106,7 @@ Eigen::Matrix<long double, 3, 1> camera_ECEF(
         const long double alt = LatLonAlt(2, 0);
 
 
-        return  reference_ECEF + 
-                primary_antenna_ECEF + 
+        return  primary_antenna_ECEF + 
                 R_ENU_to_ECEF(lat, lon) * R_body_to_ENU(azimuth, elevation) * camera_body;
 
 }
