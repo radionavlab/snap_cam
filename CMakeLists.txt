@@ -30,7 +30,7 @@ include_directories(
 	include
 	${catkin_INCLUDE_DIRS}
 	${OpenCV_INCLUDE_DIRS}
-	src # for mavlink
+	# src # for mavlink
 	./libcamera/inc
 	./libcamera/src
 )

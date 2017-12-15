@@ -1,67 +1,4 @@
-/*
-*
-*  Created on: Mar 16, 2016
-*      Author: Nicolas
-*      Modified: Tucker Haydon
-*/
-
-#include <cstdio>
-#include <cstdlib>
-#include <cstring>
-
-#include <unistd.h>
-#include <pthread.h>
-#include <sys/time.h>
-#include <errno.h>
-#include <cv.h>
-#include <highgui.h>
-#include <opencv2/core/core.hpp>
-#include <opencv2/opencv.hpp>
-#include <typeinfo>
-#include <vector>
-#include <sys/stat.h>
-#include <ctime>
-#include <iostream>
-#include <fstream>
-#include <sstream>
-#include <iomanip>
-#include <atomic>
-
-#include <ros/ros.h>
-#include <cv_bridge/cv_bridge.h>
-#include <sensor_msgs/Image.h>
-#include <sensor_msgs/CompressedImage.h>
-#include <gbx_ros_bridge_msgs/Attitude2D.h>
-#include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
-
-#include "SnapCam.h"
-
-std::atomic<bool> is_writing{false};
-
-// Precise Position Solution in ECEF coordinates
-// Position is in meters
-// Pose is in radians
-struct PPSolution {
-    std::atomic<double> x;
-    std::atomic<double> y;
-    std::atomic<double> z;
-
-    std::atomic<double> azimuth;
-    std::atomic<double> elevation;
-} solution;
-
-/* Camera parameters */
-CamConfig cfg;
-
-/* Image Publisher */
-ros::Publisher image_pub;
-
-/* Camera resolution */
-int height;
-int width;
-
-/* Save Directory for images */
-std::string save_directory;
+#include "main.h"
 
 void writer(ICameraFrame *frame) 
 {
@@ -105,8 +42,29 @@ void writer(ICameraFrame *frame)
     savefile.write((const char*)&buff[0], buff.size());
     savefile.close();
 
+    // Calculate ECEF position of the camera
+    Eigen::Matrix<long double, 3, 1> reference_ECEF;
+    reference_ECEF <<   0.0,
+                        0.0,
+                        0.0;
+
+    Eigen::Matrix<long double, 3, 1> primary_antenna_to_reference_ECEF;
+    primary_antenna_to_reference_ECEF <<    0.0,
+                                            0.0,
+                                            0.0;
+
+    Eigen::Matrix<long double, 3, 1> camera_body;
+    camera_body <<  0.0,
+                    10.0,
+                    0.0;
+
+    const long double azimuth = solution.azimuth;
+    const long double elevation = solution.elevation;
+
+    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(reference_ECEF, primary_antenna_to_reference_ECEF, camera_body, azimuth, elevation);
+
     // Write to the info file
-    std::string data = "" + std::to_string(solution.x) + " " + std::to_string(solution.y) + " " + std::to_string(solution.z) + " " + "0" + " " + std::to_string(solution.elevation) + " " + std::to_string(solution.azimuth);
+    std::string data = "" + std::to_string(camera(0,0)) + " " + std::to_string(camera(1,0)) + " " + std::to_string(camera(2,0)) + " " + "0" + " " + std::to_string(solution.elevation - M_PI/6) + " " + std::to_string(solution.azimuth);
     std::string command = "echo '" + filename + " " + data + "' >> " + save_directory + "/image_poses.txt";
     std::system(command.c_str());
     seq++;
@@ -143,50 +101,6 @@ void publisher(ICameraFrame *frame)
     image_pub.publish(im);
 
     seq++;
-}
-
-void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
-    const double rx = msg.rx;
-    const double ry = msg.ry;
-    const double rz = msg.rz;
-    const double rxRov = msg.rxRov;
-    const double ryRov = msg.ryRov;
-    const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
-    const double deltRSec = msg.deltRSec;
-    const std::vector<float> P = msg.P;
-    const uint32_t nCov = msg.nCov;
-    const double azAngle = msg.azAngle;
-    const double elAngle = msg.elAngle;
-    const double azSigma = msg.azAngle;
-    const double elSigma = msg.elSigma;
-    const double testStat = msg.testStat;
-    const uint8_t numDD = msg.numDD;
-    const uint8_t bitfield = msg.bitfield;
-
-    solution.elevation = elAngle;
-    solution.azimuth = azAngle;
-}
-
-void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
-    const double rx = msg.rx;
-    const double ry = msg.ry;
-    const double rz = msg.rz;
-    const double rxRov = msg.rxRov;
-    const double ryRov = msg.ryRov;
-    const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
-    const double deltRSec = msg.deltRSec;
-    const std::vector<float> P = msg.P;
-    const uint32_t nCov = msg.nCov;
-    const double testStat = msg.testStat;
-    const double ageOfReferenceData = msg.ageOfReferenceData;
-    const uint8_t numDD = msg.numDD;
-    const uint8_t bitfield = msg.bitfield;
-
-    solution.x = rxRov;
-    solution.y = ryRov;
-    solution.z = rzRov;
 }
 
 int main(int argc, char **argv)
