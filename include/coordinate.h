@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Eigen/Core>
-
 #include <cmath>
 
 /**
@@ -76,7 +75,7 @@ Eigen::Matrix<long double, 3, 3> R_body_to_ENU(
                 0,                  std::cos(elevation),    -1*std::sin(elevation),
                 0,                  std::sin(elevation),    std::cos(elevation);
 
-        return R_z * R_x;
+        return R_x * R_z;
 }
 
 Eigen::Matrix<long double, 3, 3> R_ENU_to_ECEF(
@@ -92,21 +91,17 @@ Eigen::Matrix<long double, 3, 3> R_ENU_to_ECEF(
 }
 
 Eigen::Matrix<long double, 3, 1> camera_ECEF(
-    const Eigen::Matrix<long double, 3, 1> reference_ECEF,
-    const Eigen::Matrix<long double, 3, 1> primary_antenna_to_reference_ECEF,
+    const Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF,
     const Eigen::Matrix<long double, 3, 1> camera_body,
     const long double azimuth,
     const long double elevation) {
-
-        const Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF = reference_ECEF + primary_antenna_to_reference_ECEF;
 
         Eigen::Matrix<long double, 3, 1> LatLonAlt = ecef2LatLonAlt(primary_antenna_ECEF);
         const long double lat = LatLonAlt(0, 0);
         const long double lon = LatLonAlt(1, 0);
         const long double alt = LatLonAlt(2, 0);
 
-
         return  primary_antenna_ECEF + 
                 R_ENU_to_ECEF(lat, lon) * R_body_to_ENU(azimuth, elevation) * camera_body;
-
 }
+

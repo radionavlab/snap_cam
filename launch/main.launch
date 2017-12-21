@@ -46,7 +46,7 @@
     <param name="position_topic" value="/phoenix/SingleBaselineRTK"/>
 
     <!-- camera_coordinates: position of the camera with respect to the primary antenna in body frame in meters -->
-    <rosparam param="camera_coordinates">[0.0, 10.0, 0.0]</rosparam>
+    <rosparam param="camera_coordinates">[0.0, 0.004, -0.009]</rosparam>
 
     </node>
 </launch>

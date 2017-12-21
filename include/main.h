@@ -42,10 +42,6 @@ std::atomic<bool> is_writing{false};
 // Position is in meters
 // Pose is in radians
 struct PPSolution {
-    std::atomic<double> referenceX;
-    std::atomic<double> referenceY;
-    std::atomic<double> referenceZ;
-
     std::atomic<double> roverX;
     std::atomic<double> roverY;
     std::atomic<double> roverZ;
@@ -112,12 +108,8 @@ void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
     const uint8_t numDD = msg.numDD;
     const uint8_t bitfield = msg.bitfield;
 
-    solution.roverX = rx;
-    solution.roverY = ry;
-    solution.roverZ = rz;
-
-    solution.referenceX = rxRov;
-    solution.referenceY = ryRov;
-    solution.referenceZ = rzRov;
+    solution.roverX = rxRov;
+    solution.roverY = ryRov;
+    solution.roverZ = rzRov;
 }
 

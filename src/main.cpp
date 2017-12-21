@@ -14,7 +14,7 @@ void writer(ICameraFrame *frame)
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    // cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
+    cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
     lastTime = currentTime;
 
     // Sequence number of images. Increments for every image
@@ -43,20 +43,15 @@ void writer(ICameraFrame *frame)
     savefile.close();
 
     // Calculate ECEF position of the camera
-    Eigen::Matrix<long double, 3, 1> reference_ECEF;
-    reference_ECEF <<   solution.referenceX,
-                        solution.referenceY,
-                        solution.referenceZ;
+    Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF;
+    primary_antenna_ECEF << solution.roverX,
+                            solution.roverY,
+                            solution.roverZ;
 
-    Eigen::Matrix<long double, 3, 1> primary_antenna_to_reference_ECEF;
-    primary_antenna_to_reference_ECEF <<    solution.roverX,
-                                            solution.roverY,
-                                            solution.roverZ;
+    const long double azimuth = -1 * solution.azimuth;
+    const long double elevation = -1 * solution.elevation;
 
-    const long double azimuth = solution.azimuth;
-    const long double elevation = solution.elevation;
-
-    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(reference_ECEF, primary_antenna_to_reference_ECEF, camera_position, azimuth, elevation);
+    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(primary_antenna_ECEF, camera_position, azimuth, elevation);
 
     // Write to the info file
     std::string data = "" + 
@@ -70,8 +65,9 @@ void writer(ICameraFrame *frame)
 
     Eigen::IOFormat CommaInitFmt(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", " << ", ";");
 
-    std::cout << (reference_ECEF + primary_antenna_to_reference_ECEF).format(CommaInitFmt) << std::endl;
-    std::cout << camera.format(CommaInitFmt) << std::endl << std::endl;
+    std::cout << "PRIMARY AND CAMERA" << std::endl;
+    std::cout << (primary_antenna_ECEF).format(CommaInitFmt) << std::endl;
+    std::cout << camera.format(CommaInitFmt) << std::endl << std::endl << std::endl; 
 
     std::string command = "echo '" + filename + " " + data + "' >> " + save_directory + "/image_poses.txt";
     std::system(command.c_str());
