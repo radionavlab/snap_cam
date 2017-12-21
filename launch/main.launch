@@ -4,7 +4,7 @@
   <node pkg="snap_cam" type="snap_cam_exec" name="camera" output="screen">
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
-    <param name="camera_resolution" value="1080p"/>
+    <param name="camera_resolution" value="4k"/>
 
     <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
     <param name="focus_mode" value="continuous-video"/>
@@ -50,6 +50,9 @@
 
     <!-- camera_position_topic: Name of the topic publishing the camera images -->
     <param name="camera_position_topic" value="/phoenix/camera_position"/>
+
+    <!-- image_publisher_hz: Rate-limiting frequency at which images are published. -->
+    <param name="image_publisher_hz" value="1.0"/>
 
     <!-- camera_coordinates: position of the camera with respect to the primary antenna in body frame in meters -->
     <rosparam param="camera_coordinates">[0.0, 0.04, -0.09]</rosparam>

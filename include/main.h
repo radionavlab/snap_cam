@@ -61,6 +61,9 @@ CamConfig cfg;
 ros::Publisher camera_image_pub;
 ros::Publisher camera_position_pub;
 
+/* Rate-limiting image publishing frequency */
+double image_publisher_hz;
+
 /* Camera resolution */
 int height;
 int width;

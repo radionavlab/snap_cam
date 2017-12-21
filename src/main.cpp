@@ -17,6 +17,7 @@ void writer(ICameraFrame *frame)
     cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
     lastTime = currentTime;
 
+
     // Sequence number of images. Increments for every image
     static uint32_t seq = 0;
 
@@ -77,20 +78,23 @@ void publisher(ICameraFrame *frame)
 {
     static int seq = 0;
 
-    if(is_writing == true) {
-        frame->releaseRef();
-        return;
-    } else {
-        is_writing = true;
-    }
-
-    // Write the FPS
     static long long lastTime = 0;
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
-    lastTime = currentTime;
+    long long diff = currentTime - lastTime;
+
+    if(     is_writing == true || 
+            (diff < (1000.0 / image_publisher_hz))) {
+        frame->releaseRef();
+        return;
+    } else {
+        is_writing = true;
+        lastTime = currentTime;
+    }
+
+    // Write the FPS
+    cout << "Video FPS: " << (1000.0 / (double)diff) << endl;
 
     // Calculate ECEF position of the camera
     Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF;
@@ -108,6 +112,7 @@ void publisher(ICameraFrame *frame)
 
     // Compose quaternion message
     geometry_msgs::Quaternion quaternionMsg;
+    cout << std::to_string(0.0) + ", " + std::to_string(solution.elevation - M_PI/6.0) + ", " + std::to_string(solution.azimuth) << endl;
     quaternionMsg = tf::createQuaternionMsgFromRollPitchYaw(0.0, solution.elevation - M_PI/6.0, solution.azimuth);
 
     // Compose Pose message
@@ -251,6 +256,11 @@ int main(int argc, char **argv)
         ROS_WARN("No callback_mode provided. Defaulting to publishing.");
     }
 
+    if (!nh.getParam("image_publisher_hz", image_publisher_hz)) {
+        image_publisher_hz = 1.0;
+        ROS_WARN("No image publisher hz. Defaulting to 1.");
+    }
+
     /* Set resolution size */
     // Some of these are nonstandard!
     if (res == "4k") {
@@ -263,7 +273,7 @@ int main(int argc, char **argv)
         width = 1920;
     } else if (res == "720p") {
         cfg.previewSize = CameraSizes::HDSize();
-        height = 720;
+        height = 736;
         width = 1280;
     } else if (res == "VGA") {
         cfg.previewSize = CameraSizes::VGASize();
