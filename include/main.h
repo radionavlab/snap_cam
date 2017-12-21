@@ -29,6 +29,10 @@
 #include <cv_bridge/cv_bridge.h>
 #include <sensor_msgs/Image.h>
 #include <sensor_msgs/CompressedImage.h>
+#include <geometry_msgs/Pose.h>
+#include <geometry_msgs/Point.h>
+#include <geometry_msgs/Quaternion.h>
+#include <tf/transform_datatypes.h>
 #include <gbx_ros_bridge_msgs/Attitude2D.h>
 #include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
 
@@ -53,8 +57,9 @@ struct PPSolution {
 /* Camera parameters */
 CamConfig cfg;
 
-/* Image Publisher */
-ros::Publisher image_pub;
+/* Camera Publishers */
+ros::Publisher camera_image_pub;
+ros::Publisher camera_position_pub;
 
 /* Camera resolution */
 int height;

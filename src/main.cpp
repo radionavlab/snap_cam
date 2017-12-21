@@ -48,10 +48,7 @@ void writer(ICameraFrame *frame)
                             solution.roverY,
                             solution.roverZ;
 
-    const long double azimuth = -1 * solution.azimuth;
-    const long double elevation = -1 * solution.elevation;
-
-    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(primary_antenna_ECEF, camera_position, azimuth, elevation);
+    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(primary_antenna_ECEF, camera_position, -solution.azimuth, -solution.elevation);
 
     // Write to the info file
     std::string data = "" + 
@@ -80,6 +77,44 @@ void publisher(ICameraFrame *frame)
 {
     static int seq = 0;
 
+    if(is_writing == true) {
+        frame->releaseRef();
+        return;
+    } else {
+        is_writing = true;
+    }
+
+    // Write the FPS
+    static long long lastTime = 0;
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
+    cout << "Video FPS: " << (1000.0 / (double)(currentTime - lastTime)) << endl;
+    lastTime = currentTime;
+
+    // Calculate ECEF position of the camera
+    Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF;
+    primary_antenna_ECEF << solution.roverX,
+                            solution.roverY,
+                            solution.roverZ;
+
+    const Eigen::Matrix<long double, 3, 1> camera = camera_ECEF(primary_antenna_ECEF, camera_position, -solution.azimuth, -solution.elevation);
+
+    // Compose point messgae
+    geometry_msgs::Point pointMsg;
+    pointMsg.x = camera(0,0);
+    pointMsg.y = camera(1,0);
+    pointMsg.z = camera(2,0);
+
+    // Compose quaternion message
+    geometry_msgs::Quaternion quaternionMsg;
+    quaternionMsg = tf::createQuaternionMsgFromRollPitchYaw(0.0, solution.elevation - M_PI/6.0, solution.azimuth);
+
+    // Compose Pose message
+    geometry_msgs::Pose poseMsg;
+    poseMsg.position = pointMsg;
+    poseMsg.orientation = quaternionMsg;
+
     // Convert YUV to RGB
     /* Multiple by 1.5 because of YUV standard */
     cv::Mat img = cv::Mat(1.5 * height, width, CV_8UC1, frame->data);
@@ -102,9 +137,12 @@ void publisher(ICameraFrame *frame)
     im.header.frame_id="";
 
     // Publish
-    image_pub.publish(im);
+    camera_image_pub.publish(im);
+    camera_position_pub.publish(poseMsg);
 
     seq++;
+    is_writing = false;
+    frame->releaseRef();
 }
 
 int main(int argc, char **argv)
@@ -122,6 +160,18 @@ int main(int argc, char **argv)
     std::string positionTopic;
     if (!nh.getParam("position_topic", positionTopic)) {
         ROS_WARN("No position topic! Exiting!");
+        exit(1);
+    }
+
+    std::string cameraImageTopic;
+    if (!nh.getParam("camera_image_topic", cameraImageTopic)) {
+        ROS_WARN("No camera image topic! Exiting!");
+        exit(1);
+    }
+
+    std::string cameraPositionTopic;
+    if (!nh.getParam("camera_position_topic", cameraPositionTopic)) {
+        ROS_WARN("No camera position topic! Exiting!");
         exit(1);
     }
 
@@ -244,7 +294,8 @@ int main(int argc, char **argv)
     if(callback_mode == "write") {
         cam.setListener(writer);
     } else {
-        image_pub = nh.advertise<sensor_msgs::CompressedImage>("image/compressed", 1);
+        camera_image_pub = nh.advertise<sensor_msgs::CompressedImage>(cameraImageTopic, 1);
+        camera_position_pub = nh.advertise<geometry_msgs::Pose>(cameraPositionTopic, 1);
         cam.setListener(publisher);
     }
 
