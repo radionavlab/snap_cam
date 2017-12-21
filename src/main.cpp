@@ -9,6 +9,9 @@ void writer(ICameraFrame *frame)
         is_writing = true;
     }
 
+    // Get ROS time 
+    ros::Time now = ros::Time::now();
+
     // Write the FPS
     static long long lastTime = 0;
     struct timeval tp;
@@ -58,7 +61,12 @@ void writer(ICameraFrame *frame)
         std::to_string(camera(2,0)) + " " + 
         "0" + " " + 
         std::to_string(solution.elevation - M_PI/6) + " " + 
-        std::to_string(solution.azimuth);
+        std::to_string(solution.azimuth) + " " +
+        std::to_string(solution.week) + " " + 
+        std::to_string(solution.secondsOfWeek) + " " + 
+        std::to_string(solution.fractionOfSecond) + " " + 
+        std::to_string(now.sec) + " " + 
+        std::to_string(now.nsec);
 
 
     Eigen::IOFormat CommaInitFmt(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", ", ", "", "", " << ", ";");

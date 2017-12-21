@@ -52,6 +52,10 @@ struct PPSolution {
 
     std::atomic<double> azimuth;
     std::atomic<double> elevation;
+
+    std::atomic<long> week;
+    std::atomic<long> secondsOfWeek;
+    std::atomic<double> fractionOfSecond;
 } solution;
 
 /* Camera parameters */
@@ -98,6 +102,10 @@ void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
 
     solution.elevation = elAngle;
     solution.azimuth = azAngle;
+
+    solution.week = tSolution.week;
+    solution.secondsOfWeek = tSolution.secondsOfWeek;
+    solution.fractionOfSecond = tSolution.fractionOfSecond;
 }
 
 void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
