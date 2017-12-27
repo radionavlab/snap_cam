@@ -68,16 +68,6 @@ struct CameraSizes {
 	static ImageSize stereoQVGASize()   {static ImageSize is(640, 240); return is;};
 };
 
-struct CameraCaps {
-	vector<ImageSize> pSizes, vSizes, picSizes;
-	vector<string> focusModes, wbModes, isoModes;
-	Range brightness, sharpness, contrast;
-	vector<Range> previewFpsRanges;
-	vector<VideoFPS> videoFpsValues;
-	vector<string> previewFormats;
-	string rawSize;
-};
-
 enum CamFunction {
     CAM_FUNC_UNKNOWN = -1,
     CAM_FUNC_HIRES = 0,
@@ -121,6 +111,7 @@ public:
 	~SnapCam();
 
 	void setListener(CallbackFunction fun);  // register a function callback
+        void start();
 
 	/* listener methods */
 	virtual void onError();
@@ -132,7 +123,6 @@ private:
 
 	ICameraDevice *camera_;
 	CameraParams params_;
-	CameraCaps caps_;
 	CamConfig config_;
 	CallbackFunction cb_;
 };

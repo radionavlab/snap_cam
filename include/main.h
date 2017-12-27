@@ -40,7 +40,8 @@
 #include "coordinate.h"
 #include "Eigen/Core"
 
-std::atomic<bool> is_writing{false};
+std::atomic<bool> front_camera_busy{false};
+std::atomic<bool> down_camera_busy{false};
 
 // Precise Position Solution in ECEF coordinates
 // Position is in meters
@@ -58,19 +59,13 @@ struct PPSolution {
     std::atomic<double> fractionOfSecond;
 } solution;
 
-/* Camera parameters */
-CamConfig cfg;
-
 /* Camera Publishers */
-ros::Publisher camera_image_pub;
+ros::Publisher camera_front_image_pub;
+ros::Publisher camera_down_image_pub;
 ros::Publisher camera_position_pub;
 
-/* Rate-limiting image publishing frequency */
-double image_publisher_hz;
-
 /* Camera resolution */
-int height;
-int width;
+int front_height, front_width, down_height, down_width;
 
 /* Camera position */
 Eigen::Matrix<long double, 3, 1> camera_position;
@@ -78,54 +73,30 @@ Eigen::Matrix<long double, 3, 1> camera_position;
 /* Save Directory for images */
 std::string save_directory;
 
-void writer(ICameraFrame *frame);
-void publisher(ICameraFrame *frame);
+/* Image callback options */
+bool publish_image_option{false};
+bool save_image_option{false};
 
-void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
-    const double rx = msg.rx;
-    const double ry = msg.ry;
-    const double rz = msg.rz;
-    const double rxRov = msg.rxRov;
-    const double ryRov = msg.ryRov;
-    const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
-    const double deltRSec = msg.deltRSec;
-    const std::vector<float> P = msg.P;
-    const uint32_t nCov = msg.nCov;
-    const double azAngle = msg.azAngle;
-    const double elAngle = msg.elAngle;
-    const double azSigma = msg.azAngle;
-    const double elSigma = msg.elSigma;
-    const double testStat = msg.testStat;
-    const uint8_t numDD = msg.numDD;
-    const uint8_t bitfield = msg.bitfield;
+void frame_handler(ICameraFrame *frame);
 
-    solution.elevation = elAngle;
-    solution.azimuth = azAngle;
 
-    solution.week = tSolution.week;
-    solution.secondsOfWeek = tSolution.secondsOfWeek;
-    solution.fractionOfSecond = tSolution.fractionOfSecond;
-}
+std::shared_ptr<CamConfig> init_down_camera_config();
+std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh);
 
-void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
-    const double rx = msg.rx;
-    const double ry = msg.ry;
-    const double rz = msg.rz;
-    const double rxRov = msg.rxRov;
-    const double ryRov = msg.ryRov;
-    const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
-    const double deltRSec = msg.deltRSec;
-    const std::vector<float> P = msg.P;
-    const uint32_t nCov = msg.nCov;
-    const double testStat = msg.testStat;
-    const double ageOfReferenceData = msg.ageOfReferenceData;
-    const uint8_t numDD = msg.numDD;
-    const uint8_t bitfield = msg.bitfield;
+void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg);
+void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg);
 
-    solution.roverX = rxRov;
-    solution.roverY = ryRov;
-    solution.roverZ = rzRov;
-}
+void down_callback(ICameraFrame *frame);
 
+void compress_image(std::vector<uint8_t>& buff, cv::Mat& img, const int compression_quality);
+
+void create_compressed_image_message(sensor_msgs::CompressedImage& image_msg, std::vector<uint8_t>& buff, const int seq);
+void calc_camera_position(Eigen::Matrix<long double, 3, 1>& camera_position);
+void save_camera_position(Eigen::Matrix<long double, 3, 1>& camera_position, const int seq);
+void save_image(std::vector<uint8_t>& buff, const int seq);
+void create_camera_position_message(geometry_msgs::Pose& pose_msg, Eigen::Matrix<long double, 3, 1>& camera_position);
+void print_fps();
+void frame_handler(ICameraFrame *frame);
+void set_callback_mode(ros::NodeHandle& nh);
+void create_images_directory(ros::NodeHandle& nh);
+void read_camera_position(ros::NodeHandle& nh);

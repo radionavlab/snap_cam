@@ -36,6 +36,7 @@
  */
 
 #include "SnapCam.h"
+#include <iostream>
 
 using namespace std;
 using namespace camera;
@@ -55,7 +56,6 @@ int SnapCam::initialize(CamConfig cfg)
         printf("No cameras detected. Are you using sudo?\n");
         return PROBLEM_EXIT;
     }
-    cfg.cameraId = 1;
 
     // Create camera device
     if(ICameraDevice::createInstance(cfg.cameraId, &camera_) != 0) {
@@ -73,35 +73,63 @@ int SnapCam::initialize(CamConfig cfg)
         return PROBLEM_EXIT;
     }
 
-    // Set the image sizes
-    params_.setPreviewSize(cfg.previewSize); 
-    params_.setVideoSize(cfg.previewSize); 
+    if(cfg.func == CAM_FUNC_HIRES) {
+        // Set the image sizes
+        params_.setPreviewSize(cfg.previewSize); 
+        params_.setVideoSize(cfg.previewSize); 
 
-    // Set image format. Pretty much only YUV420sp
-    params_.setPreviewFormat(cfg.previewFormat);
+        // Set image format. Pretty much only YUV420sp
+        params_.setPreviewFormat(cfg.previewFormat);
 
-    // Leave these for 60 fps
-    params_.setPreviewFpsRange(params_.getSupportedPreviewFpsRanges()[3]);
-    params_.setVideoFPS(params_.getSupportedVideoFps()[0]);
+        // Leave these for 60 fps
+        params_.setPreviewFpsRange(params_.getSupportedPreviewFpsRanges()[3]);
+        params_.setVideoFPS(params_.getSupportedVideoFps()[0]);
 
-    // Set picture parameters
-    params_.setFocusMode(cfg.focusMode);
-    params_.setWhiteBalance(cfg.whiteBalance);
-    params_.setISO(cfg.ISO);
-    params_.setSharpness(cfg.sharpness);
-    params_.setBrightness(cfg.brightness);
-    params_.setContrast(cfg.contrast);
+        // Set picture parameters
+        params_.setFocusMode(cfg.focusMode);
+        params_.setWhiteBalance(cfg.whiteBalance);
+        params_.setISO(cfg.ISO);
+        params_.setSharpness(cfg.sharpness);
+        params_.setBrightness(cfg.brightness);
+        params_.setContrast(cfg.contrast);
+    }
+
+    if(cfg.func == CAM_FUNC_OPTIC_FLOW) {
+        // Set the image sizes
+        params_.setPreviewSize(cfg.previewSize); 
+        params_.setVideoSize(cfg.previewSize); 
+
+        // Set image format. Pretty much only YUV420sp
+        params_.setPreviewFormat(cfg.previewFormat);
+
+        // Leave these for 60 fps
+        params_.setPreviewFpsRange(params_.getSupportedPreviewFpsRanges()[2]);
+        params_.setVideoFPS(params_.getSupportedVideoFps()[0]);
+
+        // Set picture parameters
+        params_.setFocusMode(cfg.focusMode);
+        params_.setWhiteBalance(cfg.whiteBalance);
+        params_.setISO(cfg.ISO);
+        params_.setSharpness(cfg.sharpness);
+        params_.setBrightness(cfg.brightness);
+        params_.setContrast(cfg.contrast);
+
+        params_.set("raw-size", "640x480");
+    }
 
     if (params_.commit() != 0) {
         printf("Commit failed\n");
         return PROBLEM_EXIT;
     }
 
+
+    config_ = cfg;
+}
+
+void SnapCam::start() {
     // Start the camera preview and recording. Will start pushing frames asynchronously to the callbacks
     camera_->startPreview();
     camera_->startRecording();
-
-    config_ = cfg;
 }
 
 SnapCam::~SnapCam() 
@@ -119,11 +147,14 @@ void SnapCam::onError()
     exit(EXIT_FAILURE);
 }
 
-void SnapCam::onPreviewFrame(ICameraFrame *frame) {}
+void SnapCam::onPreviewFrame(ICameraFrame *frame) {
+    if (!cb_ || config_.func != CAM_FUNC_OPTIC_FLOW) { return; }
+    frame->acquireRef();
+    std::thread(cb_, frame).detach();
+}
 
-void SnapCam::onVideoFrame(ICameraFrame *frame) 
-{
-    if (!cb_) { return; }
+void SnapCam::onVideoFrame(ICameraFrame *frame) {
+    if (!cb_ || config_.func != CAM_FUNC_HIRES) { return; }
     frame->acquireRef();
     std::thread(cb_, frame).detach();
 }
