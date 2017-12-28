@@ -107,9 +107,9 @@ int SnapCam::initialize(CamConfig cfg)
         params_.setVideoFPS(params_.getSupportedVideoFps()[0]);
 
         // Set picture parameters
-        params_.setFocusMode(cfg.focusMode);
-        params_.setWhiteBalance(cfg.whiteBalance);
-        params_.setISO(cfg.ISO);
+        // params_.setFocusMode(cfg.focusMode);
+        // params_.setWhiteBalance(cfg.whiteBalance);
+        // params_.setISO(cfg.ISO);
         params_.setSharpness(cfg.sharpness);
         params_.setBrightness(cfg.brightness);
         params_.setContrast(cfg.contrast);

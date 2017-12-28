@@ -189,15 +189,15 @@ void calc_camera_position(
                                 solution.roverY,
                                 solution.roverZ;
 
-        camera_position = camera_ECEF(primary_antenna_ECEF, camera_position, -solution.azimuth, -solution.elevation);
+        camera_position = camera_ECEF(primary_antenna_ECEF, camera_body_position, -solution.azimuth, -solution.elevation);
 }
 
 void set_callback_mode(ros::NodeHandle& nh) {
     std::string callback_mode;
     nh.getParam("callback_mode", callback_mode);
 
-    if(callback_mode == "publish")  publish_image_option= true;
-    if(callback_mode == "save")     save_image_option   = true;
+    if(callback_mode == "publish")  {publish_image_option= true;}
+    if(callback_mode == "save")     {save_image_option   = true;}
     if(callback_mode == "both") {
         publish_image_option = true;
         save_image_option = true;
@@ -238,9 +238,9 @@ void read_camera_position(ros::NodeHandle& nh) {
         ROS_WARN("No camera coordinates. Setting to zeros.");
     }
 
-    camera_position <<  camera_coordinates[0],
-                        camera_coordinates[1],
-                        camera_coordinates[2];
+    camera_body_position << camera_coordinates[0],
+                            camera_coordinates[1],
+                            camera_coordinates[2];
 }
 
 void compress_image(
@@ -268,15 +268,15 @@ void create_compressed_image_message(
 std::shared_ptr<CamConfig> init_down_camera_config() {
     std::shared_ptr<CamConfig> config = std::make_shared<CamConfig>();
     config->cameraId       = 0;
-    config->focusMode      = "auto";
-    config->whiteBalance   = "auto";
-    config->ISO            = "auto";
+    // config->focusMode      = "auto";
+    // config->whiteBalance   = "auto";
+    // config->ISO            = "auto";
     config->previewFormat  = "yuv420sp";
     config->sharpness      = 18;
     config->brightness     = 3;
     config->contrast       = 5;
-    config->exposure       = 100;
-    config->gain           = 50;
+    // config->exposure       = 100;
+    // config->gain           = 50;
     config->previewSize    = CameraSizes::VGASize();
     config->pictureSize    = CameraSizes::VGASize();
     config->func = CAM_FUNC_OPTIC_FLOW;

@@ -68,7 +68,7 @@ int camera_width, camera_height;
 int camera_number;
 
 /* Camera position */
-Eigen::Matrix<long double, 3, 1> camera_position;
+Eigen::Matrix<long double, 3, 1> camera_body_position;
 
 /* Save Directory for images */
 std::string save_directory;
