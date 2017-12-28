@@ -1,23 +1,81 @@
 #include "main.h"
 
+int main(int argc, char **argv)
+{
+    /* Ros init */
+    ros::init(argc, argv, "camera");
+    ros::NodeHandle nh("~");
+
+    /* Ros topics */
+    std::string attitudeTopic;
+    nh.getParam("attitude_topic", attitudeTopic);
+
+    std::string positionTopic;
+    nh.getParam("position_topic", positionTopic);
+
+    std::string cameraImageTopic;
+    nh.getParam("camera_image_topic", cameraImageTopic);
+
+    std::string cameraPositionTopic;
+    nh.getParam("camera_position_topic", cameraPositionTopic);
+
+    // Various init functions
+    create_images_directory(nh);
+    set_callback_mode(nh);
+    read_camera_position(nh);
+ 
+    // Subscribers
+    ros::Subscriber attitudeSubscriber = nh.subscribe(attitudeTopic, 1, attitudeMessageHandler);
+    ros::Subscriber positionSubscriber = nh.subscribe(positionTopic, 1, positionMessageHandler);
+
+    // Publishers
+    camera_image_pub = nh.advertise<sensor_msgs::CompressedImage>(cameraImageTopic, 1);
+    camera_position_pub = nh.advertise<geometry_msgs::Pose>(cameraPositionTopic, 1);
+
+    /* Camera */
+    nh.getParam("camera_number", camera_number);
+    std::shared_ptr<CamConfig> cfg;
+    if(camera_number == 1) {
+        cfg = init_front_camera_config(nh);
+    } else if(camera_number == 0) {
+        cfg = init_down_camera_config();
+    }
+    SnapCam cam(*cfg);
+    cam.setListener(frame_handler);
+    cam.start();
+
+    /* Main loop */
+    ros::Rate r(20);
+    while(nh.ok()) {
+        ros::spinOnce();
+        r.sleep();
+    }
+
+    return 0;
+}
+
 void frame_handler(ICameraFrame *frame) {
     static int seq = 0;
 
     // Check that an image is not already being processed
-    if( front_camera_busy == true) {
+    if(camera_busy == true) {
         frame->releaseRef();
         return;
     } else {
-        front_camera_busy = true;
+        camera_busy = true;
     }
 
     // Print the framerate
     print_fps();
 
-    // Convert YUV to RGB
-    /* Multiple by 1.5 because of YUV standard */
-    cv::Mat img = cv::Mat(1.5 * front_height, front_width, CV_8UC1, frame->data);
-    cv::cvtColor(img, img, CV_YUV420sp2RGB);
+    cv::Mat img;
+    if(camera_number == 1) {
+        // Convert YUV to RGB
+        img = cv::Mat(1.5 * camera_height, camera_width, CV_8UC1, frame->data);
+        cv::cvtColor(img, img, CV_YUV420sp2RGB);
+    } else if(camera_number == 0) {
+        img = cv::Mat(camera_height, camera_width, CV_8UC1, frame->data);
+    }
     frame->releaseRef();
 
     // Compress to JPEG
@@ -41,12 +99,12 @@ void frame_handler(ICameraFrame *frame) {
         geometry_msgs::Pose pose_msg;
         create_camera_position_message(pose_msg, camera_position);
 
-        camera_front_image_pub.publish(image_msg);
+        camera_image_pub.publish(image_msg);
         camera_position_pub.publish(pose_msg);
     }
 
     seq++;
-    front_camera_busy = false;
+    camera_busy = false;
 }
 
 void print_fps() {
@@ -54,7 +112,7 @@ void print_fps() {
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    std::cout << "Front FPS: " << (1000.0 / (double)(currentTime - lastTime)) << std::endl;
+    std::cout << "FPS: " << (1000.0 / (double)(currentTime - lastTime)) << std::endl;
     lastTime = currentTime;
 }
 
@@ -134,63 +192,6 @@ void calc_camera_position(
         camera_position = camera_ECEF(primary_antenna_ECEF, camera_position, -solution.azimuth, -solution.elevation);
 }
 
-int main(int argc, char **argv)
-{
-    /* Ros init */
-    ros::init(argc, argv, "camera");
-    ros::NodeHandle nh("~");
-
-    /* Ros topics */
-    std::string attitudeTopic;
-    nh.getParam("attitude_topic", attitudeTopic);
-
-    std::string positionTopic;
-    nh.getParam("position_topic", positionTopic);
-
-    std::string cameraImageTopic;
-    nh.getParam("camera_image_topic", cameraImageTopic);
-
-    std::string cameraPositionTopic;
-    nh.getParam("camera_position_topic", cameraPositionTopic);
-
-    // Various init functions
-    create_images_directory(nh);
-    set_callback_mode(nh);
-    read_camera_position(nh);
- 
-    // Subscribers
-    ros::Subscriber attitudeSubscriber = nh.subscribe(attitudeTopic, 1, attitudeMessageHandler);
-    ros::Subscriber positionSubscriber = nh.subscribe(positionTopic, 1, positionMessageHandler);
-
-    // Publishers
-    camera_front_image_pub = nh.advertise<sensor_msgs::CompressedImage>(cameraImageTopic+"front/compressed", 1);
-    camera_down_image_pub = nh.advertise<sensor_msgs::CompressedImage>(cameraImageTopic+"down/compressed", 1);
-    camera_position_pub = nh.advertise<geometry_msgs::Pose>(cameraPositionTopic, 1);
-
-    // Front camera
-    std::shared_ptr<CamConfig> cfg_front = init_front_camera_config(nh);
-    SnapCam cam_front(*cfg_front);
-    cam_front.setListener(frame_handler);
-
-    // Down camera
-    std::shared_ptr<CamConfig> cfg_down = init_down_camera_config();
-    SnapCam cam_down(*cfg_down);
-    cam_down.setListener(down_callback);
-
-    // Start the cameras
-    std::thread(&SnapCam::start, &cam_front).detach();
-    std::thread(&SnapCam::start, &cam_down).detach();
-
-    /* Main loop */
-    ros::Rate r(20);
-    while(nh.ok()) {
-        ros::spinOnce();
-        r.sleep();
-    }
-
-    return 0;
-}
-
 void set_callback_mode(ros::NodeHandle& nh) {
     std::string callback_mode;
     nh.getParam("callback_mode", callback_mode);
@@ -242,44 +243,6 @@ void read_camera_position(ros::NodeHandle& nh) {
                         camera_coordinates[2];
 }
 
-void down_callback(ICameraFrame *frame) {
-    static int seq = 0;
-
-    if(down_camera_busy == true) {
-        frame->releaseRef();
-        return;
-    } else {
-        down_camera_busy = true;
-    }
-
-    static long long lastTime = 0;
-    struct timeval tp;
-    gettimeofday(&tp, NULL);
-    long long currentTime = (long long) tp.tv_sec * 1000L + tp.tv_usec / 1000L;
-    long long diff = currentTime - lastTime;
-    lastTime = currentTime;
-    cout << "Down FPS: " << (1000.0 / (double)diff) << endl;
-
-    // Convert YUV to RGB
-    cv::Mat img = cv::Mat(down_height, down_width, CV_8UC1, frame->data);
-    frame->releaseRef();
-
-    // Compress to JPEG
-    std::vector<uint8_t> buff;
-    compress_image(buff, img, 100);
-    img.release();
-
-    // Compose ros message
-    sensor_msgs::CompressedImage msg;
-    create_compressed_image_message(msg, buff, seq);
-
-    // Publish
-    camera_down_image_pub.publish(msg);
-
-    seq++;
-    down_camera_busy = false;
-}
-
 void compress_image(
     std::vector<uint8_t>& buff, 
     cv::Mat& img, 
@@ -318,8 +281,8 @@ std::shared_ptr<CamConfig> init_down_camera_config() {
     config->pictureSize    = CameraSizes::VGASize();
     config->func = CAM_FUNC_OPTIC_FLOW;
 
-    down_height = 480;
-    down_width = 640;
+    camera_height = 480;
+    camera_width = 640;
 
     return config;
 }
@@ -341,25 +304,25 @@ std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh) {
     nh.getParam("camera_resolution", res);
     if (res == "4k") {
         config->previewSize = CameraSizes::UHDSize();
-        front_height = 2176;
-        front_width = 3840;
+        camera_height = 2176;
+        camera_width = 3840;
     } else if (res == "1080p") {
         config->previewSize = CameraSizes::FHDSize();
-        front_height = 1088;
-        front_width = 1920;
+        camera_height = 1088;
+        camera_width = 1920;
     } else if (res == "720p") {
         config->previewSize = CameraSizes::HDSize();
-        front_height = 736;
-        front_width = 1280;
+        camera_height = 736;
+        camera_width = 1280;
     } else if (res == "VGA") {
         config->previewSize = CameraSizes::VGASize();
-        front_height = 480;
-        front_width = 640;
+        camera_height = 480;
+        camera_width = 640;
     } else {
         ROS_ERROR("Invalid resolution %s. Defaulting to VGA\n", res.c_str());
         config->previewSize = CameraSizes::stereoVGASize();
-        front_height = 480;
-        front_width = 640;
+        camera_height = 480;
+        camera_width = 640;
     }
 
     config->exposure        = 100;

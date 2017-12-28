@@ -40,8 +40,6 @@
 #include "coordinate.h"
 #include "Eigen/Core"
 
-std::atomic<bool> front_camera_busy{false};
-std::atomic<bool> down_camera_busy{false};
 
 // Precise Position Solution in ECEF coordinates
 // Position is in meters
@@ -59,13 +57,15 @@ struct PPSolution {
     std::atomic<double> fractionOfSecond;
 } solution;
 
+std::atomic<bool> camera_busy{false};
+
 /* Camera Publishers */
-ros::Publisher camera_front_image_pub;
-ros::Publisher camera_down_image_pub;
+ros::Publisher camera_image_pub;
 ros::Publisher camera_position_pub;
 
 /* Camera resolution */
-int front_height, front_width, down_height, down_width;
+int camera_width, camera_height;
+int camera_number;
 
 /* Camera position */
 Eigen::Matrix<long double, 3, 1> camera_position;
@@ -76,9 +76,6 @@ std::string save_directory;
 /* Image callback options */
 bool publish_image_option{false};
 bool save_image_option{false};
-
-void frame_handler(ICameraFrame *frame);
-
 
 std::shared_ptr<CamConfig> init_down_camera_config();
 std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh);
