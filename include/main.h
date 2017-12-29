@@ -40,6 +40,26 @@
 #include "coordinate.h"
 #include "Eigen/Core"
 
+#define DEFAULT_EXPOSURE_VALUE  250
+#define MIN_EXPOSURE_VALUE 1
+#define MAX_EXPOSURE_VALUE 511
+#define DEFAULT_GAIN_VALUE  50
+#define MIN_GAIN_VALUE 0
+#define MAX_GAIN_VALUE 150
+
+#define EXPOSURE_CHANGE_THRESHOLD 10.0f
+#define GAIN_CHANGE_THRESHOLD 5.0f
+#define MSV_TARGET 5.0f
+
+#define EXPOSURE_P 30.0f
+#define EXPOSURE_I 0.1f
+#define EXPOSURE_D 0.1f
+
+#define GAIN_P 15.0f
+#define GAIN_I 0.05f
+#define GAIN_D 0.05f
+
+#define HISTOGRAM_MASK_SIZE 128
 
 // Precise Position Solution in ECEF coordinates
 // Position is in meters
@@ -58,6 +78,7 @@ struct PPSolution {
 } solution;
 
 std::atomic<bool> camera_busy{false};
+std::shared_ptr<SnapCam> cam;
 
 /* Camera Publishers */
 ros::Publisher camera_image_pub;
@@ -76,6 +97,8 @@ std::string save_directory;
 /* Image callback options */
 bool publish_image_option{false};
 bool save_image_option{false};
+
+void updateExposureAndGain(cv::Mat &frame);
 
 std::shared_ptr<CamConfig> init_down_camera_config();
 std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh);

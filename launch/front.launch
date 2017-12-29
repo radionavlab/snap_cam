@@ -4,7 +4,7 @@
   <node pkg="snap_cam" type="snap_cam_exec" name="front_camera" output="screen">
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
-    <param name="camera_resolution" value="4k"/>
+    <param name="camera_resolution" value="1080p"/>
 
     <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
     <param name="focus_mode" value="continuous-video"/>
@@ -37,7 +37,7 @@
     <param name="base_directory" value="/mnt/storage/images/"/>
 
     <!-- callback_mode: publish, save, both -->
-    <param name="callback_mode" value="save"/>
+    <param name="callback_mode" value="publish"/>
 
     <!-- attitude_topic: Name of the topic publishing attitude data for this quad -->
     <param name="attitude_topic" value="/phoenix/Attitude2D"/>

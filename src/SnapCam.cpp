@@ -126,6 +126,20 @@ int SnapCam::initialize(CamConfig cfg)
     config_ = cfg;
 }
 
+void SnapCam::updateGain(int gain) {
+    params_.setManualGain(gain);
+    if(params_.commit() != 0) {
+        printf("Could not update gain!\n");
+    }
+}
+
+void SnapCam::updateExposure(int exposure) {
+    params_.setManualExposure(exposure);
+    if(params_.commit() != 0) {
+        printf("Could not update exposure!\n");
+    }
+}
+
 void SnapCam::start() {
     // Start the camera preview and recording. Will start pushing frames asynchronously to the callbacks
     camera_->startPreview();

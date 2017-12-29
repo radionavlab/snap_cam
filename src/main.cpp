@@ -40,9 +40,10 @@ int main(int argc, char **argv)
     } else if(camera_number == 0) {
         cfg = init_down_camera_config();
     }
-    SnapCam cam(*cfg);
-    cam.setListener(frame_handler);
-    cam.start();
+    
+    cam = std::make_shared<SnapCam>(*cfg);
+    cam->setListener(frame_handler);
+    cam->start();
 
     /* Main loop */
     ros::Rate r(20);
@@ -75,6 +76,7 @@ void frame_handler(ICameraFrame *frame) {
         cv::cvtColor(img, img, CV_YUV420sp2RGB);
     } else if(camera_number == 0) {
         img = cv::Mat(camera_height, camera_width, CV_8UC1, frame->data);
+        updateExposureAndGain(img);
     }
     frame->releaseRef();
 
@@ -105,6 +107,104 @@ void frame_handler(ICameraFrame *frame) {
 
     seq++;
     camera_busy = false;
+}
+
+/* This function was adapted from the original SnapCam repository */
+void updateExposureAndGain(cv::Mat &frame)
+{
+        static float msv_error_old_;
+        static float msv_error_int_;
+
+        //limit update rate to 5Hz
+/*
+        static int counter = 1;
+        const int devider = 5;
+        if (counter%devider != 0) {
+                counter++;
+                return;
+        }
+        counter = 1;
+*/
+
+        //init histogram variables
+        cv::Mat hist;
+        int channels[] = {0};
+        int histSize[] = {10}; //10 bins
+        float range[] = { 0, 255 };
+        const float* ranges[] = { range };
+
+        // only use 128x128 window to calculate exposure
+        cv::Mat mask(frame.rows,frame.cols,CV_8U,cv::Scalar(0));
+        if (frame.cols > HISTOGRAM_MASK_SIZE && frame.rows > HISTOGRAM_MASK_SIZE) {
+                mask(cv::Rect(frame.cols/2-HISTOGRAM_MASK_SIZE/2, frame.rows/2-HISTOGRAM_MASK_SIZE/2,
+                        HISTOGRAM_MASK_SIZE, HISTOGRAM_MASK_SIZE)) = 255;
+        } else {
+                mask = 255;
+        }
+
+        //calculate the histogram with 10 bins
+        cv::calcHist( &frame, 1, channels, mask,
+             hist, 1, histSize, ranges,
+             true, // the histogram is uniform
+             false );
+
+        //calculate Mean Sample Value (MSV)
+        float msv = 0.0f;
+        for (int i = 0; i < histSize[0]; i++) {
+                msv += (i+1)*hist.at<float>(i)/16384.0f; //128x128 -> 16384
+        }
+
+        //get first exposure and gain value
+        static float exposure_old = 100;
+        static float gain_old = 50;
+        float exposure = exposure_old;
+        float gain = gain_old;
+
+        //calculate MSV error, derivative and integral
+        float msv_error = MSV_TARGET - msv;
+        msv_error_old_ = msv_error;
+        msv_error_int_ += msv_error;
+        float msv_error_d = msv_error - msv_error_old_;
+
+        //calculate new exposure value based on MSV
+        exposure += EXPOSURE_P*msv_error + EXPOSURE_I*msv_error_int_ + EXPOSURE_D*msv_error_d;
+
+        //adjust the gain if exposure is saturated
+        if (gain > MIN_GAIN_VALUE || (exposure > MAX_EXPOSURE_VALUE-1.0f && exposure_old > MAX_EXPOSURE_VALUE-1.0f)) {
+
+                //calculate new gain value based on MSV
+                gain += GAIN_P*msv_error + GAIN_I*msv_error_int_ + GAIN_D*msv_error_d;
+
+                if (gain < MIN_GAIN_VALUE)
+                        gain = MIN_GAIN_VALUE;
+                if (gain > MAX_GAIN_VALUE)
+                        gain = MAX_GAIN_VALUE;
+
+                //set new gain value if bigger than threshold
+                if (fabs(gain - gain_old) > GAIN_CHANGE_THRESHOLD || (gain > MAX_GAIN_VALUE-1.0f && gain_old < MAX_GAIN_VALUE) ||
+                   (gain < MIN_GAIN_VALUE+1.0f && gain_old > MIN_GAIN_VALUE)) {
+                        cam->updateGain(std::round(gain));
+                        gain_old = gain;
+                }
+
+        } else { //adjust exposure
+
+                if (exposure < MIN_EXPOSURE_VALUE)
+                        exposure = MIN_EXPOSURE_VALUE;
+                if (exposure > MAX_EXPOSURE_VALUE)
+                        exposure = MAX_EXPOSURE_VALUE;
+
+                //set new exposure value if bigger than threshold or exposure old is not yet bigger than MAX_EXPOSURE_VALUE
+                if (fabs(exposure - exposure_old) > EXPOSURE_CHANGE_THRESHOLD ||
+                   (exposure > MAX_EXPOSURE_VALUE-1.0f && exposure_old < MAX_EXPOSURE_VALUE)) {
+                        cam->updateExposure(std::round(exposure));
+                        exposure_old = exposure;
+                }
+
+        }
+
+        msv_error_old_ = msv_error;
+
 }
 
 void print_fps() {

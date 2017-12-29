@@ -113,6 +113,9 @@ public:
 	void setListener(CallbackFunction fun);  // register a function callback
         void start();
 
+        void updateGain(int gain);
+        void updateExposure(int exposure);
+
 	/* listener methods */
 	virtual void onError();
         virtual void onVideoFrame(ICameraFrame *frame);
