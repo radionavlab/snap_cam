@@ -46,7 +46,7 @@ endif()
 ## Declare a C++ library
 if (camera_LIBRARIES)
     add_library(snap_cam
-      src/SnapCam.cpp
+      src/snapcam.cc
     )
     target_link_libraries(snap_cam
       ${OpenCV_LIBS}
@@ -57,7 +57,7 @@ endif()
 
 # add the ROS executables
 if (camera_LIBRARIES)
-    add_executable(${TARGET} src/main.cpp)
+    add_executable(${TARGET} src/main.cc src/callback.cc)
     target_link_libraries(${TARGET} yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
 endif()
 

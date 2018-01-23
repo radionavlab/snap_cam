@@ -35,7 +35,7 @@
  *      Author: Tucker Haydon
  */
 
-#include "SnapCam.h"
+#include "snapcam.h"
 #include <iostream>
 
 using namespace std;
