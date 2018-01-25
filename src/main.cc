@@ -60,11 +60,34 @@ void frame_handler(ICameraFrame *frame) {
 
     Eigen::Matrix<long double, 3, 1> camera_orientation;
     camera_orientation << 0,
-                          solution.elevation - M_PI/6,
-                          solution.azimuth;
+                          solution.el - M_PI/6,
+                          solution.az;
+
+    // Copy the covariance into matrix form
+    Eigen::Matrix<long double, 3, 3> camera_position_covariance;
+    for(int col = 0; col < 3; col++) {
+        for(int row = 0; row < 3; row++) {
+            camera_position_covariance(row, col) = solution.pos_cov[3*col + row];
+        }
+    }
+
+    Eigen::Matrix<long double, 3, 3> camera_orientation_covariance;
+    for(int col = 1; col < 3; col++) {
+        for(int row = 1; row < 3; row++) {
+            camera_orientation_covariance(row, col) = solution.att_cov[2*(col-1) + (row-1)];
+        }
+    }
+    camera_orientation_covariance(0,0) = roll_var;
+
 
     // Pass image and camera pose to student callback
-    callback(img, camera_position, camera_orientation);
+    callback(img, 
+             camera_position, 
+             camera_position_covariance,
+             camera_orientation,
+             camera_orientation_covariance,
+             f,
+             k1);
 
     // Release the image
     img.release();
@@ -74,14 +97,13 @@ void frame_handler(ICameraFrame *frame) {
 }
 
 // Calculate ECEF position of the camera
-void calc_camera_position(
-    Eigen::Matrix<long double, 3, 1>& camera_position) {
+void calc_camera_position(Eigen::Matrix<long double, 3, 1>& camera_position) {
         Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF;
-        primary_antenna_ECEF << solution.roverX,
-                                solution.roverY,
-                                solution.roverZ;
+        primary_antenna_ECEF << solution.x,
+                                solution.y,
+                                solution.z;
 
-        camera_position = camera_ECEF(primary_antenna_ECEF, camera_body_position, -solution.azimuth, -solution.elevation);
+        camera_position = camera_ECEF(primary_antenna_ECEF, camera_body_position, -solution.az, -solution.el);
 }
 
 void read_camera_position(ros::NodeHandle& nh) {
@@ -162,8 +184,13 @@ void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
     const uint8_t numDD = msg.numDD;
     const uint8_t bitfield = msg.bitfield;
 
-    solution.elevation = elAngle;
-    solution.azimuth = azAngle;
+    solution.el = elAngle;
+    solution.az = azAngle;
+
+    // Copy the covariance
+    for(int i = 0; i < 4; i++) {
+        solution.att_cov[i] = P[i];
+    }
 }
 
 void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
@@ -182,7 +209,12 @@ void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
     const uint8_t numDD = msg.numDD;
     const uint8_t bitfield = msg.bitfield;
 
-    solution.roverX = rxRov;
-    solution.roverY = ryRov;
-    solution.roverZ = rzRov;
+    solution.x = rxRov;
+    solution.y = ryRov;
+    solution.z = rzRov;
+
+    // Copy the covariance
+    for(int i = 0; i < 9; i++) {
+        solution.pos_cov[i] = P[i];
+    }
 }

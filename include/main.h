@@ -41,37 +41,18 @@
 #include "Eigen/Core"
 #include "callback.h"
 
-#define DEFAULT_EXPOSURE_VALUE  250
-#define MIN_EXPOSURE_VALUE 1
-#define MAX_EXPOSURE_VALUE 511
-#define DEFAULT_GAIN_VALUE  50
-#define MIN_GAIN_VALUE 0
-#define MAX_GAIN_VALUE 150
-
-#define EXPOSURE_CHANGE_THRESHOLD 10.0f
-#define GAIN_CHANGE_THRESHOLD 5.0f
-#define MSV_TARGET 5.0f
-
-#define EXPOSURE_P 30.0f
-#define EXPOSURE_I 0.1f
-#define EXPOSURE_D 0.1f
-
-#define GAIN_P 15.0f
-#define GAIN_I 0.05f
-#define GAIN_D 0.05f
-
-#define HISTOGRAM_MASK_SIZE 128
-
 // Precise Position Solution in ECEF coordinates
 // Position is in meters
 // Pose is in radians
 struct PPSolution {
-    std::atomic<double> roverX;
-    std::atomic<double> roverY;
-    std::atomic<double> roverZ;
+    std::atomic<double> x;
+    std::atomic<double> y;
+    std::atomic<double> z;
+    std::atomic<float> pos_cov[9];
 
-    std::atomic<double> azimuth;
-    std::atomic<double> elevation;
+    std::atomic<double> az;
+    std::atomic<double> el;
+    std::atomic<float> att_cov[4];
 } solution;
 
 std::atomic<bool> camera_busy{false};
@@ -80,11 +61,18 @@ std::shared_ptr<SnapCam> cam;
 /* Camera position */
 Eigen::Matrix<long double, 3, 1> camera_body_position;
 
+/* Camera Instrinsics */
+const double f = 1656.06;
+const double k1 = -0.0269765;
+
+/* Roll variance. Set so +-3 sigma is 15 degrees */
+const double roll_var = 0.007615435;
+
 /* Camera info */
 double camera_width, camera_height;
 
+/* Function stubs */
 std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh);
-
 void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg);
 void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg);
 void calc_camera_position(Eigen::Matrix<long double, 3, 1>& camera_position);
