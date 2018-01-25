@@ -51,5 +51,6 @@ catkin_make
 
 ## Run Snap Cam
 ```sh
+sudo -s
 roslaunch snap_cam main.launch
 ```
