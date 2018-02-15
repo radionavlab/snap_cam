@@ -51,13 +51,13 @@
 #define GAIN_CHANGE_THRESHOLD 5.0f
 #define MSV_TARGET 5.0f
 
-#define EXPOSURE_P 30.0f
-#define EXPOSURE_I 0.1f
-#define EXPOSURE_D 0.1f
+#define EXPOSURE_P 15.0f
+#define EXPOSURE_I 0.05f
+#define EXPOSURE_D 1.5f
 
 #define GAIN_P 15.0f
 #define GAIN_I 0.05f
-#define GAIN_D 0.05f
+#define GAIN_D 1.5f
 
 #define HISTOGRAM_MASK_SIZE 128
 
@@ -99,6 +99,7 @@ bool publish_image_option{false};
 bool save_image_option{false};
 
 void updateExposureAndGain(cv::Mat &frame);
+void save_image_time(int seq);
 
 std::shared_ptr<CamConfig> init_down_camera_config();
 std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh);

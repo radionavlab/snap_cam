@@ -37,7 +37,7 @@
     <param name="base_directory" value="/mnt/storage/images/"/>
 
     <!-- callback_mode: publish, save, both -->
-    <param name="callback_mode" value="publish"/>
+    <param name="callback_mode" value="save"/>
 
     <!-- attitude_topic: Name of the topic publishing attitude data for this quad -->
     <param name="attitude_topic" value="/phoenix/Attitude2D"/>

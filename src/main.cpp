@@ -57,6 +57,7 @@ int main(int argc, char **argv)
 
 void frame_handler(ICameraFrame *frame) {
     static int seq = 0;
+    cout << "Handle" << endl;
 
     // Check that an image is not already being processed
     if(camera_busy == true) {
@@ -91,6 +92,7 @@ void frame_handler(ICameraFrame *frame) {
 
     if(save_image_option == true) {
         save_image(buff, seq);
+        save_image_time(seq);
         save_camera_position(camera_position, seq);
     }
 
@@ -116,15 +118,14 @@ void updateExposureAndGain(cv::Mat &frame)
         static float msv_error_int_;
 
         //limit update rate to 5Hz
-/*
         static int counter = 1;
-        const int devider = 5;
+        const int devider = 15 * .2;
         if (counter%devider != 0) {
                 counter++;
                 return;
         }
         counter = 1;
-*/
+
 
         //init histogram variables
         cv::Mat hist;
@@ -248,17 +249,27 @@ void save_image(
         savefile.close();
 }
 
-/*
-void save_image_time() {
+
+void save_image_time(int seq) {
+    std::stringstream ss;
+    ss << std::setw(5) << std::setfill('0') << seq;
+    const std::string filename = "frame" + ss.str() + ".jpg";
+
     // Get ROS time 
     ros::Time now = ros::Time::now();
+    std::string data = "" + 
         std::to_string(solution.week) + " " + 
         std::to_string(solution.secondsOfWeek) + " " + 
         std::to_string(solution.fractionOfSecond) + " " + 
         std::to_string(now.sec) + " " + 
         std::to_string(now.nsec);
+
+
+
+    std::string command = "echo '" + filename + " " + data + "' >> " + save_directory + "/image_times.txt";
+    std::system(command.c_str());
 }
-*/
+
 
 void save_camera_position(
     Eigen::Matrix<long double, 3, 1>& camera_position,
