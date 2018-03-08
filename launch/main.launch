@@ -39,10 +39,16 @@
     <!-- position_topic: Name of the topic publishing position data for this quad -->
     <param name="position_topic" value="/phoenix/SingleBaselineRTK"/>
 
-    <!-- camera_position_topic: Name of the topic publishing the camera images -->
-    <param name="camera_position_topic" value="/phoenix/camera_position"/>
+    <!-- balloon_position_topic: Name of topic publishing the position of the balloon -->
+    <param name="balloon_topic" value="/phoenix/balloon"/>
 
-    <!-- camera_coordinates: position of the camera with respect to the primary antenna in body frame in meters -->
-    <rosparam param="camera_coordinates">[0.0, 0.04, -0.09]</rosparam>
+    <!-- Sensor Params. Defined in sensorParams.h -->
+    <rosparam param="rcB">[0.0, 0.04, -0.09]</rosparam>
+    <rosparam param="rpB">[0.0, 0.04, -0.09]</rosparam>
+    <rosparam param="rrG">[0.0, 0.04, -0.09]</rosparam>
+    <rosparam param="riG">[0.0, 0.04, -0.09]</rosparam>
+    <param name="f" value="1656.06"/>
+    <param name="k1" value="-0.0269765"/>
+
     </node>
 </launch>

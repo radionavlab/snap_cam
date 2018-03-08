@@ -1,30 +1,30 @@
 #include "main.h"
 
+/* Extern variables */
+SensorParams sensorParams;
+GPSSolution solution;
+
 int main(int argc, char **argv) {
     /* Ros init */
     ros::init(argc, argv, "camera");
     ros::NodeHandle nh("~");
 
-    /* Ros topics */
-    std::string attitudeTopic;
-    nh.getParam("attitude_topic", attitudeTopic);
-
-    std::string positionTopic;
-    nh.getParam("position_topic", positionTopic);
-
-    // Various init functions
-    read_camera_position(nh);
+    /* Load parameters from launch file */
+    loadParams(nh);
  
     /* Subscribers */
     ros::Subscriber attitudeSubscriber = nh.subscribe(attitudeTopic, 1, attitudeMessageHandler);
     ros::Subscriber positionSubscriber = nh.subscribe(positionTopic, 1, positionMessageHandler);
 
+    /* Publishers */
+    balloonLocationPublisher = nh.advertise<geometry_msgs::Point>(balloonTopic, 1);
+
     /* Camera */
     std::shared_ptr<CamConfig> cfg;
-    cfg = init_front_camera_config(nh);
+    cfg = initFrontCameraConfig(nh);
     
     cam = std::make_shared<SnapCam>(*cfg);
-    cam->setListener(frame_handler);
+    cam->setListener(frameHandler);
     cam->start();
 
     /* Main loop */
@@ -37,89 +37,143 @@ int main(int argc, char **argv) {
     return 0;
 }
 
-void frame_handler(ICameraFrame *frame) {
+void loadParams(const ros::NodeHandle& nh) {
+    /* ROS topics */
+    nh.getParam("attitude_topic", attitudeTopic);
+    nh.getParam("position_topic", positionTopic);
+    nh.getParam("balloon_topic", balloonTopic);
+
+    /* Position of camera in body frame */
+    std::vector<double> rcB_;
+    if (!nh.getParam("rcB", rcB_)) {
+        ROS_WARN("Camera position not defined.");
+        exit(EXIT_FAILURE);
+    }
+
+    sensorParams.rcB << rcB_[0],
+                        rcB_[1],
+                        rcB_[2];
+
+    /* Position of primary in body frame */
+    std::vector<double> rpB_;
+    if (!nh.getParam("rpB", rpB_)) {
+        ROS_WARN("Primary position not defined.");
+        exit(EXIT_FAILURE);
+    }
+
+    sensorParams.rpB << rpB_[0],
+                        rpB_[1],
+                        rpB_[2];
+
+    /* Position of reference in ECEF frame */
+    std::vector<double> rrG_;
+    if (!nh.getParam("rrG", rrG_)) {
+        ROS_WARN("Reference position not defined.");
+        exit(EXIT_FAILURE);
+    }
+
+    sensorParams.rrG << rrG_[0],
+                        rrG_[1],
+                        rrG_[2];
+
+    /* Position of inertial in ECEF frame */
+    std::vector<double> riG_;
+    if (!nh.getParam("riG", riG_)) {
+        ROS_WARN("Inertial position not defined.");
+        exit(EXIT_FAILURE);
+    }
+
+    sensorParams.riG << riG_[0],
+                        riG_[1],
+                        riG_[2];
+
+    /* Focal Length of camera */
+    double f_;
+    if (!nh.getParam("f", f_)) {
+        ROS_WARN("Focal length not defined.");
+        exit(EXIT_FAILURE);
+    }
+
+    sensorParams.f = f_;
+
+    /* Focal Length of camera */
+    double k1_;
+    if (!nh.getParam("k1", k1_)) {
+        ROS_WARN("Camera intrinsics not defined.");
+        exit(EXIT_FAILURE);
+    }
+
+    sensorParams.k1 = k1_;
+}
+
+void frameHandler(ICameraFrame *frame) {
     // Check that an image is not already being processed
-    if(camera_busy == true) {
+    if(isCameraBusy == true) {
         frame->releaseRef();
         return;
     } else {
-        camera_busy = true;
+        isCameraBusy = true;
     }
 
     // Convert YUV to RGB
     cv::Mat img;
-    img = cv::Mat(1.5 * camera_height, camera_width, CV_8UC1, frame->data);
+    img = cv::Mat(1.5 * sensorParams.imageHeight, sensorParams.imageWidth, CV_8UC1, frame->data);
     cv::cvtColor(img, img, CV_YUV420sp2RGB);
 
     // Release the camera buffer
     frame->releaseRef();
 
-    // Calculate the position of the camera
-    Eigen::Matrix<long double, 3, 1> camera_position;
-    calc_camera_position(camera_position);
-
-    Eigen::Matrix<long double, 3, 1> camera_orientation;
-    camera_orientation << 0,
-                          solution.el - M_PI/6,
-                          solution.az;
-
-    // Copy the covariance into matrix form
-    Eigen::Matrix<long double, 3, 3> camera_position_covariance;
-    for(int col = 0; col < 3; col++) {
-        for(int row = 0; row < 3; row++) {
-            camera_position_covariance(row, col) = solution.pos_cov[3*col + row];
-        }
-    }
-
-    Eigen::Matrix<long double, 3, 3> camera_orientation_covariance;
-    for(int col = 1; col < 3; col++) {
-        for(int row = 1; row < 3; row++) {
-            camera_orientation_covariance(row, col) = solution.att_cov[2*(col-1) + (row-1)];
-        }
-    }
-    camera_orientation_covariance(0,0) = roll_var;
-
+//     // Calculate the position of the camera
+//     Eigen::Matrix<long double, 3, 1> rcGR;
+//     calc_rcGR(rcGR);
+// 
+//     Eigen::Matrix<long double, 3, 1> ecI;
+//     ecI << 0, solution.el - M_PI/6, solution.az;
+// 
+//     // Copy the covariance into matrix form
+//     Eigen::Matrix<long double, 3, 3> RrcGR;
+//     for(int col = 0; col < 3; col++) {
+//         for(int row = 0; row < 3; row++) {
+//             RrcGR(row, col) = solution.posCov[3*col + row];
+//         }
+//     }
+// 
+//     Eigen::Matrix<long double, 3, 3> RecI;
+//     for(int col = 1; col < 3; col++) {
+//         for(int row = 1; row < 3; row++) {
+//             RecI(row, col) = solution.attCov[2*(col-1) + (row-1)];
+//         }
+//     }
+//     RecI(0,0) = rollVar;
 
     // Pass image and camera pose to student callback
-    callback(img, 
-             camera_position, 
-             camera_position_covariance,
-             camera_orientation,
-             camera_orientation_covariance,
-             f,
-             k1);
+    const Eigen::Vector3i rbi = calcBalloonPosition(img);
+
+    // Report the camera location
+    geometry_msgs::Point rbiMsg;
+    rbiMsg.x = rbi(0);
+    rbiMsg.y = rbi(1);
+    rbiMsg.z = rbi(2);
+
+    balloonLocationPublisher.publish(rbiMsg);
 
     // Release the image
     img.release();
 
     // Finished processing
-    camera_busy = false;
+    isCameraBusy = false;
 }
 
-// Calculate ECEF position of the camera
-void calc_camera_position(Eigen::Matrix<long double, 3, 1>& camera_position) {
-        Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF;
-        primary_antenna_ECEF << solution.x,
-                                solution.y,
-                                solution.z;
+// void calc_rcGR(Eigen::Matrix<long double, 3, 1>& rcG) {
+//         Eigen::Matrix<long double, 3, 1> primaryAntennaECEF;
+//         primaryAntennaECEF << solution.x,
+//                               solution.y,
+//                               solution.z;
+// 
+//         rcG = bodyToECEF(primaryAntennaECEF, rcB, -solution.az, -solution.el);
+// }
 
-        camera_position = camera_ECEF(primary_antenna_ECEF, camera_body_position, -solution.az, -solution.el);
-}
-
-void read_camera_position(ros::NodeHandle& nh) {
-    /* Position of the camera with respect to primary antenna in body frame */
-    std::vector<double> camera_coordinates;
-    if (!nh.getParam("camera_coordinates", camera_coordinates)) {
-        camera_coordinates = {0.0, 0.0, 0.0};
-        ROS_WARN("No camera coordinates. Setting to zeros.");
-    }
-
-    camera_body_position << camera_coordinates[0],
-                            camera_coordinates[1],
-                            camera_coordinates[2];
-}
-
-std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh) {
+std::shared_ptr<CamConfig> initFrontCameraConfig(ros::NodeHandle& nh) {
     std::shared_ptr<CamConfig> config = std::make_shared<CamConfig>();
 
     nh.getParam("focus_mode",       config->focusMode);
@@ -131,30 +185,30 @@ std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh) {
     nh.getParam("contrast",         config->contrast);
 
     /* Set resolution size */
-    // Some of these are nonstandard!
+    /* Some of these are nonstandard! */
     std::string res;
     nh.getParam("camera_resolution", res);
     if (res == "4k") {
         config->previewSize = CameraSizes::UHDSize();
-        camera_height = 2176;
-        camera_width = 3840;
+        sensorParams.imageHeight = 2176;
+        sensorParams.imageWidth = 3840;
     } else if (res == "1080p") {
         config->previewSize = CameraSizes::FHDSize();
-        camera_height = 1088;
-        camera_width = 1920;
+        sensorParams.imageHeight = 1088;
+        sensorParams.imageWidth = 1920;
     } else if (res == "720p") {
         config->previewSize = CameraSizes::HDSize();
-        camera_height = 736;
-        camera_width = 1280;
+        sensorParams.imageHeight = 736;
+        sensorParams.imageWidth = 1280;
     } else if (res == "VGA") {
         config->previewSize = CameraSizes::VGASize();
-        camera_height = 480;
-        camera_width = 640;
+        sensorParams.imageHeight = 480;
+        sensorParams.imageWidth = 640;
     } else {
         ROS_ERROR("Invalid resolution %s. Defaulting to VGA\n", res.c_str());
         config->previewSize = CameraSizes::stereoVGASize();
-        camera_height = 480;
-        camera_width = 640;
+        sensorParams.imageHeight = 480;
+        sensorParams.imageWidth = 640;
     }
 
     config->exposure        = 100;
@@ -163,58 +217,4 @@ std::shared_ptr<CamConfig> init_front_camera_config(ros::NodeHandle& nh) {
     config->func            = CAM_FUNC_HIRES;
 
     return config;
-}
-
-void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
-    const double rx = msg.rx;
-    const double ry = msg.ry;
-    const double rz = msg.rz;
-    const double rxRov = msg.rxRov;
-    const double ryRov = msg.ryRov;
-    const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
-    const double deltRSec = msg.deltRSec;
-    const std::vector<float> P = msg.P;
-    const uint32_t nCov = msg.nCov;
-    const double azAngle = msg.azAngle;
-    const double elAngle = msg.elAngle;
-    const double azSigma = msg.azAngle;
-    const double elSigma = msg.elSigma;
-    const double testStat = msg.testStat;
-    const uint8_t numDD = msg.numDD;
-    const uint8_t bitfield = msg.bitfield;
-
-    solution.el = elAngle;
-    solution.az = azAngle;
-
-    // Copy the covariance
-    for(int i = 0; i < 4; i++) {
-        solution.att_cov[i] = P[i];
-    }
-}
-
-void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
-    const double rx = msg.rx;
-    const double ry = msg.ry;
-    const double rz = msg.rz;
-    const double rxRov = msg.rxRov;
-    const double ryRov = msg.ryRov;
-    const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
-    const double deltRSec = msg.deltRSec;
-    const std::vector<float> P = msg.P;
-    const uint32_t nCov = msg.nCov;
-    const double testStat = msg.testStat;
-    const double ageOfReferenceData = msg.ageOfReferenceData;
-    const uint8_t numDD = msg.numDD;
-    const uint8_t bitfield = msg.bitfield;
-
-    solution.x = rxRov;
-    solution.y = ryRov;
-    solution.z = rzRov;
-
-    // Copy the covariance
-    for(int i = 0; i < 9; i++) {
-        solution.pos_cov[i] = P[i];
-    }
 }

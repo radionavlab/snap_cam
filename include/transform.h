@@ -2,6 +2,7 @@
 
 #include <Eigen/Core>
 #include <cmath>
+#include "sensorParams.h"
 
 /**
 * This function was adapted from gss/shared/core/navtoolbox.
@@ -90,9 +91,19 @@ Eigen::Matrix<long double, 3, 3> R_ENU_to_ECEF(
 
 }
 
-Eigen::Matrix<long double, 3, 1> camera_ECEF(
+// Eigen::Vector3d transformBodyToECEF(
+//     const Eigen::Vector3d rbRG,         // Position of body origin with respect to reference in ECEF frame
+//     const Eigen::Vector3d rbB,          // Vector with respect to body origin in body frame
+//     const double azimuth,               // Yaw around ENU Z axis
+//     const double elevation              // Pitch 
+//     ) {
+//         return rbRG + sensorParams.rrG
+// 
+// }
+
+Eigen::Matrix<long double, 3, 1> bodyToECEF(
     const Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF,
-    const Eigen::Matrix<long double, 3, 1> camera_body,
+    const Eigen::Matrix<long double, 3, 1> bodyVec,
     const long double azimuth,
     const long double elevation) {
 
@@ -102,6 +113,6 @@ Eigen::Matrix<long double, 3, 1> camera_ECEF(
         const long double alt = LatLonAlt(2, 0);
 
         return  primary_antenna_ECEF + 
-                R_ENU_to_ECEF(lat, lon) * R_body_to_ENU(azimuth, elevation) * camera_body;
+                R_ENU_to_ECEF(lat, lon) * R_body_to_ENU(azimuth, elevation) * bodyVec;
 }
 
