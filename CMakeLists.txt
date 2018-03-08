@@ -53,7 +53,7 @@ target_link_libraries(snap_cam
 )
 
 # add the ROS executables
-add_executable(${TARGET} src/main.cc src/callback.cc)
+add_executable(${TARGET} src/main.cc src/callback.cc src/GPS.cc)
 target_link_libraries(${TARGET} yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
 
 add_dependencies(${TARGET} gbx_ros_bridge_msgs_gencpp)
