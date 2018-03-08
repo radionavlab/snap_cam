@@ -19,13 +19,13 @@ void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
     const uint8_t numDD = msg.numDD;
     const uint8_t bitfield = msg.bitfield;
 
-    solution.el = elAngle;
-    solution.az = azAngle;
+    gpsSolution.el = elAngle;
+    gpsSolution.az = azAngle;
 
     // Copy the covariance
     // Only have covariance information for pitch and yaw
     for(int i = 0; i < 4; i++) {
-        solution.attCov[i] = P[i];
+        gpsSolution.attCov[i] = P[i];
     }
 }
 
@@ -45,12 +45,12 @@ void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
     const uint8_t numDD = msg.numDD;
     const uint8_t bitfield = msg.bitfield;
 
-    solution.x = rxRov;
-    solution.y = ryRov;
-    solution.z = rzRov;
+    gpsSolution.x = rxRov;
+    gpsSolution.y = ryRov;
+    gpsSolution.z = rzRov;
 
     // Copy the covariance
     for(int i = 0; i < 9; i++) {
-        solution.posCov[i] = P[i];
+        gpsSolution.posCov[i] = P[i];
     }
 }

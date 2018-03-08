@@ -2,7 +2,7 @@
 
 /* Extern variables */
 SensorParams sensorParams;
-GPSSolution solution;
+GPSSolution gpsSolution;
 
 int main(int argc, char **argv) {
     /* Ros init */
@@ -123,31 +123,8 @@ void frameHandler(ICameraFrame *frame) {
     // Release the camera buffer
     frame->releaseRef();
 
-//     // Calculate the position of the camera
-//     Eigen::Matrix<long double, 3, 1> rcGR;
-//     calc_rcGR(rcGR);
-// 
-//     Eigen::Matrix<long double, 3, 1> ecI;
-//     ecI << 0, solution.el - M_PI/6, solution.az;
-// 
-//     // Copy the covariance into matrix form
-//     Eigen::Matrix<long double, 3, 3> RrcGR;
-//     for(int col = 0; col < 3; col++) {
-//         for(int row = 0; row < 3; row++) {
-//             RrcGR(row, col) = solution.posCov[3*col + row];
-//         }
-//     }
-// 
-//     Eigen::Matrix<long double, 3, 3> RecI;
-//     for(int col = 1; col < 3; col++) {
-//         for(int row = 1; row < 3; row++) {
-//             RecI(row, col) = solution.attCov[2*(col-1) + (row-1)];
-//         }
-//     }
-//     RecI(0,0) = rollVar;
-
     // Pass image and camera pose to student callback
-    const Eigen::Vector3i rbi = calcBalloonPosition(img);
+    const Eigen::Vector3d rbi = calcBalloonPosition(img);
 
     // Report the camera location
     geometry_msgs::Point rbiMsg;
@@ -163,15 +140,6 @@ void frameHandler(ICameraFrame *frame) {
     // Finished processing
     isCameraBusy = false;
 }
-
-// void calc_rcGR(Eigen::Matrix<long double, 3, 1>& rcG) {
-//         Eigen::Matrix<long double, 3, 1> primaryAntennaECEF;
-//         primaryAntennaECEF << solution.x,
-//                               solution.y,
-//                               solution.z;
-// 
-//         rcG = bodyToECEF(primaryAntennaECEF, rcB, -solution.az, -solution.el);
-// }
 
 std::shared_ptr<CamConfig> initFrontCameraConfig(ros::NodeHandle& nh) {
     std::shared_ptr<CamConfig> config = std::make_shared<CamConfig>();

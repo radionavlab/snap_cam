@@ -8,7 +8,7 @@
 #include <gbx_ros_bridge_msgs/BaseTime.h>
 
 
-// Precise Position Solution in ECEF coordinates
+// Position of primary antenna with respect to reference in ECEF
 // Position is in meters
 // Pose is in radians
 typedef struct {
@@ -22,7 +22,7 @@ typedef struct {
     std::atomic<float> attCov[4];
 } GPSSolution;
 
-extern GPSSolution solution;
+extern GPSSolution gpsSolution;
 
 /* Roll variance. Set so +-3 sigma is 15 degrees */
 const double rollVar = 0.007615435;

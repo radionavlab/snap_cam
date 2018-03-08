@@ -3,4 +3,4 @@
 #include <cv.h>
 #include <Eigen/Core>
 
-const Eigen::Vector3i calcBalloonPosition(const cv::Mat& img);
+const Eigen::Vector3d calcBalloonPosition(const cv::Mat& img);
