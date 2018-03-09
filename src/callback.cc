@@ -8,6 +8,7 @@
 #include <sstream>
 #include <opencv2/opencv.hpp>
 #include <fstream>
+#include <iomanip>
 
 /* Sensor params in: sensorParams */
 /* GPS solution in: gpsSolution */
