@@ -16,8 +16,8 @@ int main(int argc, char **argv) {
     ros::Subscriber attitudeSubscriber = nh.subscribe(attitudeTopic, 1, attitudeMessageHandler);
     ros::Subscriber positionSubscriber = nh.subscribe(positionTopic, 1, positionMessageHandler);
 
-    /* Publishers */
-    balloonInfoPublisher = nh.advertise<mg_msgs::BalloonInfo>(balloonTopic, 1);
+    /* Make directory for images to be saved in */
+    makeImageDirectory();
 
     /* Camera */
     std::shared_ptr<CamConfig> cfg;
@@ -35,6 +35,25 @@ int main(int argc, char **argv) {
     }
 
     return 0;
+}
+
+void makeImageDirectory() {
+    /* Make a directory for all of the images */
+    time_t now = time(0);
+    tm *ltm = localtime(&now);
+    std::string year = std::to_string(1900 + ltm->tm_year);
+    std::string month = std::to_string(1 + ltm->tm_mon);
+    std::string day = std::to_string(ltm->tm_mday);
+    std::string hour = std::to_string(ltm->tm_hour);
+    std::string min = std::to_string(ltm->tm_min);
+    std::string sec = std::to_string(ltm->tm_sec);
+    std::string dir = year + "-" + month + "-" + day + "-" + hour + "-" + min + "-" + sec + "/";
+    saveDirectory = "/mnt/storage/images/" + dir;
+    const int err = mkdir(saveDirectory.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+    if(err == -1){
+        ROS_WARN("Error creating directory!");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void loadParams(const ros::NodeHandle& nh) {
@@ -115,10 +134,6 @@ void frameHandler(ICameraFrame *frame) {
         isCameraBusy = true;
     }
 
-    // Record where the image was taken.
-    double antennaPos[] = {gpsSolution.x, gpsSolution.y, gpsSolution.z};
-    double antennaAtt[] = {0, gpsSolution.el, gpsSolution.az};
-
     // Convert YUV to RGB
     cv::Mat img;
     img = cv::Mat(1.5 * sensorParams.imageHeight, sensorParams.imageWidth, CV_8UC1, frame->data);
@@ -128,23 +143,7 @@ void frameHandler(ICameraFrame *frame) {
     frame->releaseRef();
 
     // Process the balloon info
-    const BalloonInfo balloonInfo = processImage(img);
-
-    // Report the camera location
-    mg_msgs::BalloonInfo balloonInfoMsg;
-    balloonInfoMsg.balloonPos.x = balloonInfo.balloonLocation(0);
-    balloonInfoMsg.balloonPos.y = balloonInfo.balloonLocation(1);
-    balloonInfoMsg.balloonPos.z = balloonInfo.balloonLocation(2);
-    balloonInfoMsg.antennaPos.x = antennaPos[0];
-    balloonInfoMsg.antennaPos.y = antennaPos[1];
-    balloonInfoMsg.antennaPos.z = antennaPos[2];
-    balloonInfoMsg.roll.data    = antennaAtt[0];
-    balloonInfoMsg.pitch.data   = antennaAtt[1];
-    balloonInfoMsg.yaw.data     = antennaAtt[2];
-    balloonInfoMsg.rad.data     = balloonInfo.balloonRadius;
-    balloonInfoMsg.color.data   = balloonInfo.color;
-
-    balloonInfoPublisher.publish(balloonInfoMsg);
+    saveImage(img, saveDirectory);
 
     // Release the image
     img.release();
