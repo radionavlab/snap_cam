@@ -1,13 +1,13 @@
 #include "GPS.h"
 
-void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
+void attitudeMessageHandler(const mg_msgs::Attitude2D msg) {
     const double rx = msg.rx;
     const double ry = msg.ry;
     const double rz = msg.rz;
     const double rxRov = msg.rxRov;
     const double ryRov = msg.ryRov;
     const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
+    const mg_msgs::BaseTime tSolution = msg.tSolution;
     const double deltRSec = msg.deltRSec;
     const std::vector<float> P = msg.P;
     const uint32_t nCov = msg.nCov;
@@ -29,14 +29,14 @@ void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg) {
     }
 }
 
-void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg) {
+void positionMessageHandler(const mg_msgs::SingleBaselineRTK msg) {
     const double rx = msg.rx;
     const double ry = msg.ry;
     const double rz = msg.rz;
     const double rxRov = msg.rxRov;
     const double ryRov = msg.ryRov;
     const double rzRov = msg.rzRov;
-    const gbx_ros_bridge_msgs::BaseTime tSolution = msg.tSolution;
+    const mg_msgs::BaseTime tSolution = msg.tSolution;
     const double deltRSec = msg.deltRSec;
     const std::vector<float> P = msg.P;
     const uint32_t nCov = msg.nCov;

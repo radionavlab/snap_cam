@@ -4,7 +4,7 @@
 #include "sensorParams.h"
 #include "GPS.h"
 
-const Eigen::Vector3d calcBalloonPosition(const cv::Mat& img) {
+const BalloonInfo processImage(const cv::Mat& img) {
     /* Sensor params in: sensorParams */
     /* GPS solution in: gpsSolution */
 

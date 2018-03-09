@@ -3,9 +3,9 @@
 #include <atomic>
 #include <vector>
 
-#include <gbx_ros_bridge_msgs/Attitude2D.h>
-#include <gbx_ros_bridge_msgs/SingleBaselineRTK.h>
-#include <gbx_ros_bridge_msgs/BaseTime.h>
+#include <mg_msgs/Attitude2D.h>
+#include <mg_msgs/SingleBaselineRTK.h>
+#include <mg_msgs/BaseTime.h>
 
 
 // Position of primary antenna with respect to reference in ECEF
@@ -27,5 +27,5 @@ extern GPSSolution gpsSolution;
 /* Roll variance. Set so +-3 sigma is 15 degrees */
 const double rollVar = 0.007615435;
 
-void positionMessageHandler(const gbx_ros_bridge_msgs::SingleBaselineRTK msg);
-void attitudeMessageHandler(const gbx_ros_bridge_msgs::Attitude2D msg);
+void positionMessageHandler(const mg_msgs::SingleBaselineRTK msg);
+void attitudeMessageHandler(const mg_msgs::Attitude2D msg);

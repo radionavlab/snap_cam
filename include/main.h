@@ -5,6 +5,7 @@
 #include <Eigen/Core>
 
 #include <geometry_msgs/Point.h>
+#include <mg_msgs/BalloonInfo.h>
 
 #include "snapcam.h"
 #include "callback.h"
@@ -21,7 +22,7 @@ std::string positionTopic;
 std::string balloonTopic;
 
 /* ROS publishers */
-ros::Publisher balloonLocationPublisher;
+ros::Publisher balloonInfoPublisher;
 
 /* Function stubs */
 std::shared_ptr<CamConfig> initFrontCameraConfig(ros::NodeHandle& nh);

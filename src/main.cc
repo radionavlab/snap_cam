@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     ros::Subscriber positionSubscriber = nh.subscribe(positionTopic, 1, positionMessageHandler);
 
     /* Publishers */
-    balloonLocationPublisher = nh.advertise<geometry_msgs::Point>(balloonTopic, 1);
+    balloonInfoPublisher = nh.advertise<mg_msgs::BalloonInfo>(balloonTopic, 1);
 
     /* Camera */
     std::shared_ptr<CamConfig> cfg;
@@ -115,6 +115,10 @@ void frameHandler(ICameraFrame *frame) {
         isCameraBusy = true;
     }
 
+    // Record where the image was taken.
+    double antennaPos[] = {gpsSolution.x, gpsSolution.y, gpsSolution.z};
+    double antennaAtt[] = {0, gpsSolution.el, gpsSolution.az};
+
     // Convert YUV to RGB
     cv::Mat img;
     img = cv::Mat(1.5 * sensorParams.imageHeight, sensorParams.imageWidth, CV_8UC1, frame->data);
@@ -123,16 +127,24 @@ void frameHandler(ICameraFrame *frame) {
     // Release the camera buffer
     frame->releaseRef();
 
-    // Pass image and camera pose to student callback
-    const Eigen::Vector3d rbi = calcBalloonPosition(img);
+    // Process the balloon info
+    const BalloonInfo balloonInfo = processImage(img);
 
     // Report the camera location
-    geometry_msgs::Point rbiMsg;
-    rbiMsg.x = rbi(0);
-    rbiMsg.y = rbi(1);
-    rbiMsg.z = rbi(2);
+    mg_msgs::BalloonInfo balloonInfoMsg;
+    balloonInfoMsg.balloonPos.x = balloonInfo.balloonLocation(0);
+    balloonInfoMsg.balloonPos.y = balloonInfo.balloonLocation(1);
+    balloonInfoMsg.balloonPos.z = balloonInfo.balloonLocation(2);
+    balloonInfoMsg.antennaPos.x = antennaPos[0];
+    balloonInfoMsg.antennaPos.y = antennaPos[1];
+    balloonInfoMsg.antennaPos.z = antennaPos[2];
+    balloonInfoMsg.roll.data    = antennaAtt[0];
+    balloonInfoMsg.pitch.data   = antennaAtt[1];
+    balloonInfoMsg.yaw.data     = antennaAtt[2];
+    balloonInfoMsg.rad.data     = balloonInfo.balloonRadius;
+    balloonInfoMsg.color.data   = balloonInfo.color;
 
-    balloonLocationPublisher.publish(rbiMsg);
+    balloonInfoPublisher.publish(balloonInfoMsg);
 
     // Release the image
     img.release();
