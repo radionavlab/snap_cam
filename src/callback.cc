@@ -7,6 +7,7 @@
 #include <sstream>
 #include <opencv2/opencv.hpp>
 #include <fstream>
+#include <iomanip>
 
 const BalloonInfo processImage(const cv::Mat& img) {
     /* Sensor params in: sensorParams */
@@ -38,7 +39,9 @@ const BalloonInfo processImage(const cv::Mat& img) {
     /* Example: Printing info */
     std::cout << "Got image! " << img.size[0] << ", " << img.size[1] << std::endl;
     std::cout << "Camera params: " << sensorParams.f << ", " << sensorParams.k1 << std::endl;
-    std::cout << "Antenna Position: " << gpsSolution.x << ", " << gpsSolution.y << ", " << gpsSolution.z << std::endl;
+    std::cout << "Antenna Position: " << std::fixed << std::setprecision(9) << gpsSolution.x << ", " 
+                                      << std::fixed << std::setprecision(9) << gpsSolution.y << ", " 
+                                      << std::fixed << std::setprecision(9) << gpsSolution.z << std::endl;
 
     /* Example: Printing FPS. */
     static long long timeLast = 0;
