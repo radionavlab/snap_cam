@@ -10,13 +10,13 @@
 * Lat, Lon in radians
 * Alt in meters
 */
-Eigen::Matrix3d ECEFToLatLonAlt(
-    const Eigen::Matrix3d pos
+Eigen::Vector3d ECEFToLatLonAlt(
+    const Eigen::Vector3d pos
     ) {
 
-        const long double X = pos(0, 0);
-        const long double Y = pos(1, 0);
-        const long double Z = pos(2, 0);
+        const long double X = pos(0);
+        const long double Y = pos(1);
+        const long double Z = pos(2);
 
         // Meters
         const long double AA_WGS84 = 6378137.00000;     
@@ -54,12 +54,12 @@ Eigen::Matrix3d ECEFToLatLonAlt(
 
         long double lon = std::atan2(Y,X);
 
-        return (Eigen::Vector3d() << lat, lon, alt).finished();
+        return Eigen::Vector3d(lat, lon, alt);
 }
 
 Eigen::Vector3d transformENUToECEF(
     const Eigen::Vector3d& rIG,         // Position of inertial origin with respect to ECEF origin expressed in ECEF frame
-    const Eigen::Vector3d& rI,          // Vector with respect to inertial origin expressed in inertial frame   
+    const Eigen::Vector3d& rI           // Vector with respect to inertial origin expressed in inertial frame   
     ) {
 
         const Eigen::Vector3d latLonAlt = ECEFToLatLonAlt(rIG);
@@ -79,7 +79,7 @@ Eigen::Vector3d transformENUToECEF(
 Eigen::Matrix3d crossProductEquivalent(
     const Eigen::Vector3d& r
     ) {
-        return (Matrix3d() << 0 -r(2) r(1) r(2) 0 -r(0) -r(1) r(0) 0).finished();
+        return (Eigen::Matrix3d() << 0, -r(2), r(1), r(2), 0, -r(0), -r(1), r(0), 0).finished();
 }
 
 // Generates a rotation matrix from Axis-Angle specification
@@ -102,9 +102,9 @@ Eigen::Matrix3d eulerToDCM(
     const double pitch,
     const double yaw 
     ) {
-        Rx = rotationMatrix(Eigen::Vector3d(1,0,0), roll);
-        Ry = rotationMatrix(Eigen::Vector3d(0,1,0), pitch);
-        Rz = rotationMatrix(Eigen::Vector3d(0,0,1), yaw);
+        Eigen::Matrix3d Rx = rotationMatrix(Eigen::Vector3d(1,0,0), roll);
+        Eigen::Matrix3d Ry = rotationMatrix(Eigen::Vector3d(0,1,0), pitch);
+        Eigen::Matrix3d Rz = rotationMatrix(Eigen::Vector3d(0,0,1), yaw);
     
         // Must transpose. If frame B is rotated away from frame A by a rotation R,
         // to rotate a vector expressed in frame A to a vector expressed in
