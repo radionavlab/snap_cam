@@ -123,7 +123,8 @@ Eigen::Vector3d rotateBodyToENU(
     const double pitch,
     const double yaw
     ) {
-       return eulerToDCM(roll, pitch, yaw) * rB; 
+        // Negate angles since going from Body -> ENU but angles are ENU -> Body
+        return eulerToDCM(-roll, -pitch, -yaw) * rB; 
 }
 
 // 3-2-1 euler rotation

@@ -39,12 +39,9 @@
     <!-- position_topic: Name of the topic publishing position data for this quad -->
     <param name="position_topic" value="/phoenix/SingleBaselineRTK"/>
 
-    <!-- balloon_position_topic: Name of topic publishing the position of the balloon -->
-    <param name="balloon_topic" value="/phoenix/balloon"/>
-
     <!-- Sensor Params. Defined in sensorParams.h -->
     <rosparam param="rcB">[0.0, 0.0146, -0.0907]</rosparam>
-    <!-- <rosparam param="rcB">[0.0, 0.0, 0.0]</rosparam> -->
+    <!-- <rosparam param="rcB">[0.0, 10.0, 0.0]</rosparam> -->
     <rosparam param="rpB">[0.0, 0.0, 0.0]</rosparam>
     <rosparam param="rrG">[-741990.536, -5462227.638, 3198019.45]</rosparam>
     <rosparam param="riG">[-742015.136, -5462219.538, 3198014.35]</rosparam>

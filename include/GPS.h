@@ -19,7 +19,7 @@ typedef struct {
 
     std::atomic<double> az;
     std::atomic<double> el;
-    std::atomic<float> attCov[4];
+    std::atomic<float> attCov[9];
 } GPSSolution;
 
 extern GPSSolution gpsSolution;
