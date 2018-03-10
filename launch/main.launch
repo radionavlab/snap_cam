@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <launch>
 
-  <node pkg="snap_cam" type="snap_cam_exec" name="camera" output="screen">
+  <node pkg="snap_cam" type="snap_cam_exec" name="front_camera" output="screen">
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
     <param name="camera_resolution" value="4k"/>
@@ -33,29 +33,20 @@
     <!-- gain: integer between 0 and 255 -->
     <param name="gain" value="50"/>
 
-    <!-- base_directory: where to save the images. Make sure this is an absolute path and that it ends in the forward-slash  -->
-    <param name="base_directory" value="/mnt/storage/images/"/>
-
-    <!-- callback_mode: publish, write -->
-    <param name="callback_mode" value="write"/>
-
     <!-- attitude_topic: Name of the topic publishing attitude data for this quad -->
     <param name="attitude_topic" value="/phoenix/Attitude2D"/>
 
     <!-- position_topic: Name of the topic publishing position data for this quad -->
     <param name="position_topic" value="/phoenix/SingleBaselineRTK"/>
 
-    <!-- camera_image_topic: Name of the topic publishing the camera images -->
-    <param name="camera_image_topic" value="/phoenix/image/compressed"/>
-
-    <!-- camera_position_topic: Name of the topic publishing the camera images -->
-    <param name="camera_position_topic" value="/phoenix/camera_position"/>
-
-    <!-- image_publisher_hz: Rate-limiting frequency at which images are published. -->
-    <param name="image_publisher_hz" value="1.0"/>
-
-    <!-- camera_coordinates: position of the camera with respect to the primary antenna in body frame in meters -->
-    <rosparam param="camera_coordinates">[0.0, 0.04, -0.09]</rosparam>
+    <!-- Sensor Params. Defined in sensorParams.h -->
+    <rosparam param="rcB">[0.0, 0.0146, -0.0907]</rosparam>
+    <!-- <rosparam param="rcB">[0.0, 10.0, 0.0]</rosparam> -->
+    <rosparam param="rpB">[0.0, 0.0, 0.0]</rosparam>
+    <rosparam param="rrG">[-741990.536, -5462227.638, 3198019.45]</rosparam>
+    <rosparam param="riG">[-742015.136, -5462219.538, 3198014.35]</rosparam>
+    <param name="f" value="1656.06"/>
+    <param name="k1" value="-0.0269765"/>
 
     </node>
 </launch>

@@ -8,25 +8,20 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -Wno-format-security -Wno-lit
 find_package(OpenCV REQUIRED)
 
 find_package(catkin REQUIRED COMPONENTS
-  cv_bridge
-  image_transport
   roscpp
   rospy
-  sensor_msgs
   std_msgs
   geometry_msgs
-  tf
   mavlink
-  gbx_ros_bridge_msgs
+  mg_msgs
 )
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES snap_cam
-  CATKIN_DEPENDS gbx_ros_bridge_msgs
+  CATKIN_DEPENDS mg_msgs
   DEPENDS yaml-cpp
 )
-
 
 include_directories(
 	include
@@ -37,28 +32,24 @@ include_directories(
 	./libcamera/src
 )
 
-find_library(camera_LIBRARIES NAMES camera PATHS /usr/lib)
+find_library(CAMERA_LIBS NAMES camera PATHS /usr/lib)
 
-if (NOT camera_LIBRARIES)
+if (NOT CAMERA_LIBS)
     message(WARNING "Could not find camera libraries, not building targets that depend on it")
 endif()
 
 ## Declare a C++ library
-if (camera_LIBRARIES)
-    add_library(snap_cam
-      src/SnapCam.cpp
-    )
-    target_link_libraries(snap_cam
-      ${OpenCV_LIBS}
-      ${camera_LIBRARIES}
-    )
+add_library(snap_cam
+  src/snapcam.cc
+)
 
-endif()
+target_link_libraries(snap_cam
+  ${OpenCV_LIBS}
+  ${CAMERA_LIBS}
+)
 
 # add the ROS executables
-if (camera_LIBRARIES)
-    add_executable(${TARGET} src/main.cpp)
-    target_link_libraries(${TARGET} yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
-endif()
+add_executable(${TARGET} src/main.cc src/callback.cc src/GPS.cc)
+target_link_libraries(${TARGET} yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
 
-add_dependencies(${TARGET} gbx_ros_bridge_msgs_gencpp)
+add_dependencies(${TARGET} mg_msgs_gencpp)
