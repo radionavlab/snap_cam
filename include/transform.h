@@ -10,7 +10,9 @@
 * Lat, Lon in radians
 * Alt in meters
 */
-Eigen::Matrix<long double, 3, 1> ecef2LatLonAlt(const Eigen::Matrix<long double, 3, 1> pos) {
+Eigen::Matrix3d ECEFToLatLonAlt(
+    const Eigen::Matrix3d pos
+    ) {
 
         const long double X = pos(0, 0);
         const long double Y = pos(1, 0);
@@ -52,67 +54,109 @@ Eigen::Matrix<long double, 3, 1> ecef2LatLonAlt(const Eigen::Matrix<long double,
 
         long double lon = std::atan2(Y,X);
 
-        Eigen::Matrix<long double, 3, 1> LatLonAlt;
-        LatLonAlt <<    lat,
-                        lon,
-                        alt;
-
-        return LatLonAlt;
+        return (Eigen::Vector3d() << lat, lon, alt).finished();
 }
 
+Eigen::Vector3d transformENUToECEF(
+    const Eigen::Vector3d& rIG,         // Position of inertial origin with respect to ECEF origin expressed in ECEF frame
+    const Eigen::Vector3d& rI,          // Vector with respect to inertial origin expressed in inertial frame   
+    ) {
 
+        const Eigen::Vector3d latLonAlt = ECEFToLatLonAlt(rIG);
+        const double lat = latLonAlt(0);
+        const double lon = latLonAlt(1);
 
-Eigen::Matrix<long double, 3, 3> R_body_to_ENU(
-    const long double azimuth,
-    const long double elevation) {
-
-        Eigen::Matrix<long double, 3, 3> R_z;
-        R_z <<  std::cos(azimuth),  -1*std::sin(azimuth),   0,
-                std::sin(azimuth),  std::cos(azimuth),      0,
-                0,                  0,                      1;
-
-        Eigen::Matrix<long double, 3, 3> R_x;
-        R_x <<  1,                  0,                      0,
-                0,                  std::cos(elevation),    -1*std::sin(elevation),
-                0,                  std::sin(elevation),    std::cos(elevation);
-
-        return R_x * R_z;
-}
-
-Eigen::Matrix<long double, 3, 3> R_ENU_to_ECEF(
-    const long double lat,
-    const long double lon) {
-        Eigen::Matrix<long double, 3, 3> R;
+        Eigen::Matrix3d R;
         R <<    -1*std::sin(lon),       -1*std::sin(lat) * std::cos(lon),       std::cos(lat) * std::cos(lon),
                 std::cos(lon),          -1*std::sin(lat)*std::sin(lon),         std::cos(lat)*std::sin(lon),
                 0,                      std::cos(lat),                          std::sin(lat);
 
-        return R;
-
+    return rIG + R * rI;
 }
 
-// Eigen::Vector3d transformBodyToECEF(
-//     const Eigen::Vector3d rbRG,         // Position of body origin with respect to reference in ECEF frame
-//     const Eigen::Vector3d rbB,          // Vector with respect to body origin in body frame
-//     const double azimuth,               // Yaw around ENU Z axis
-//     const double elevation              // Pitch 
-//     ) {
-//         return rbRG + sensorParams.rrG
-// 
-// }
 
-Eigen::Matrix<long double, 3, 1> bodyToECEF(
-    const Eigen::Matrix<long double, 3, 1> primary_antenna_ECEF,
-    const Eigen::Matrix<long double, 3, 1> bodyVec,
-    const long double azimuth,
-    const long double elevation) {
-
-        Eigen::Matrix<long double, 3, 1> LatLonAlt = ecef2LatLonAlt(primary_antenna_ECEF);
-        const long double lat = LatLonAlt(0, 0);
-        const long double lon = LatLonAlt(1, 0);
-        const long double alt = LatLonAlt(2, 0);
-
-        return  primary_antenna_ECEF + 
-                R_ENU_to_ECEF(lat, lon) * R_body_to_ENU(azimuth, elevation) * bodyVec;
+// https://en.wikipedia.org/wiki/Cross_product#Conversion_to_matrix_multiplication
+Eigen::Matrix3d crossProductEquivalent(
+    const Eigen::Vector3d& r
+    ) {
+        return (Matrix3d() << 0 -r(2) r(1) r(2) 0 -r(0) -r(1) r(0) 0).finished();
 }
 
+// Generates a rotation matrix from Axis-Angle specification
+// https://en.wikipedia.org/wiki/Rotation_matrix#Rotation_matrix_from_axis_and_angle
+Eigen::Matrix3d rotationMatrix(
+    const Eigen::Vector3d& r,           // Unit vector about which to rotate
+    const double phi                    // Angle of rotation
+    ) {
+        return std::cos(phi) * Eigen::Matrix3d::Identity() + std::sin(phi) * crossProductEquivalent(r) + (1 - std::cos(phi)) * (r * r.transpose());
+}
+
+// Composes a direction cosine matrix that transforms a vector expressed in frame A to the same vector expressed in frame B
+// 3-2-1 euler rotation. Angles are B rotated away from A
+// Initially, frames A and B are aligned (old frame is initally frame A)
+// Rotate away from old frame around z axis by yaw
+// Rotate away from old frame around y axis by pitch
+// Rotate away from old frame around x axis by roll
+Eigen::Matrix3d eulerToDCM(
+    const double roll,
+    const double pitch,
+    const double yaw 
+    ) {
+        Rx = rotationMatrix(Eigen::Vector3d(1,0,0), roll);
+        Ry = rotationMatrix(Eigen::Vector3d(0,1,0), pitch);
+        Rz = rotationMatrix(Eigen::Vector3d(0,0,1), yaw);
+    
+        // Must transpose. If frame B is rotated away from frame A by a rotation R,
+        // to rotate a vector expressed in frame A to a vector expressed in
+        // frame B, must multiply by inv(R) = R'
+        return (Rz*Ry*Rx).transpose();
+}
+
+// 3-2-1 euler rotation
+// Initially, body and inertial frame are aligned (old frame is initally inertial)
+// Rotate body away from old frame around z axis by yaw
+// Rotate body away from old frame around y axis by pitch
+// Rotate body away from old frame around x axis by roll
+Eigen::Vector3d rotateBodyToENU(
+    const Eigen::Vector3d& rB,
+    const double roll,
+    const double pitch,
+    const double yaw
+    ) {
+       return eulerToDCM(roll, pitch, yaw) * rB; 
+}
+
+// 3-2-1 euler rotation
+// Initially, body and inertial frame are aligned (old frame is initally inertial)
+// Rotate body away from old frame around z axis by yaw
+// Rotate body away from old frame around y axis by pitch
+// Rotate body away from old frame around x axis by roll
+Eigen::Vector3d transformBodyToENU(
+    const Eigen::Vector3d& rBI,         // Position of body origin with respect to inertial origin expressed in inertial frame
+    const Eigen::Vector3d& rB,          // Vector from body origin in body frame
+    const double roll,                  
+    const double pitch,                 
+    const double yaw                    
+    ) {
+
+    return rBI + rotateBodyToENU(rB, roll, pitch, yaw);
+}
+
+
+Eigen::Vector3d transformBodyToECEF(
+    const Eigen::Vector3d& rIRG,        // Position of inertial origin with respect to reference in ECEF frame
+    const Eigen::Vector3d& rBI,         // Position of body origin with respect to inertial in inertial frame 
+    const Eigen::Vector3d& rB,          // Vector with respect to body origin in body frame
+    const double roll,                  // 3-2-1 Euler rotation x-axis
+    const double pitch,                 // 3-2-1 Euler rotation y-axis
+    const double yaw                    // 3-2-1 Euler rotation z-axis
+    ) {
+
+        // Convert body coordinate to ENU
+        const Eigen::Vector3d rcI = transformBodyToENU(rBI, rB, roll, pitch, yaw);
+
+        // Convert ENU to ECEF
+        const Eigen::Vector3d rcG = transformENUToECEF(rIRG + sensorParams.rrG, rcI);
+
+        return rcG;
+}

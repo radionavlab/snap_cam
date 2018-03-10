@@ -30,7 +30,13 @@ void saveImage(const cv::Mat& img, const std::string saveDirectory) {
     /* Calculate camera pose */
     const Eigen::Vector3d cameraAtt(0, gpsSolution.el - M_PI/6, gpsSolution.az);
     const Eigen::Vector3d rpRG(gpsSolution.x, gpsSolution.y, gpsSolution.z);
-    const Eigen::Vector3d cameraPos // = calc_rcG(rpRG);
+    const Eigen::Vector3d cameraPos = transformBodyToECEF(
+        rpRG, 
+        Eigen::Vector3d(0,0,0), 
+        sensorParams.rcB,
+        cameraAtt(0),
+        cameraAtt(1),
+        cameraAtt(2));
 
     /* Write camera pose to file */
     std::string data = "" + 
