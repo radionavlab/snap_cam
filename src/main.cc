@@ -60,7 +60,6 @@ void loadParams(const ros::NodeHandle& nh) {
     /* ROS topics */
     nh.getParam("attitude_topic", attitudeTopic);
     nh.getParam("position_topic", positionTopic);
-    nh.getParam("balloon_topic", balloonTopic);
 
     /* Position of camera in body frame */
     std::vector<double> rcB_;
@@ -142,7 +141,7 @@ void frameHandler(ICameraFrame *frame) {
     // Release the camera buffer
     frame->releaseRef();
 
-    // Process the balloon info
+    // Same the image and camera info
     saveImage(img, saveDirectory);
 
     // Release the image

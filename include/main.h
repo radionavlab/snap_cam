@@ -22,7 +22,6 @@ std::string saveDirectory;
 /* ROS topics */
 std::string attitudeTopic;
 std::string positionTopic;
-std::string balloonTopic;
 
 /* Function stubs */
 std::shared_ptr<CamConfig> initFrontCameraConfig(ros::NodeHandle& nh);
