@@ -6,7 +6,6 @@
 #include <sys/stat.h>
 
 #include <geometry_msgs/Point.h>
-#include <mg_msgs/BalloonInfo.h>
 
 #include "snapcam.h"
 #include "callback.h"
