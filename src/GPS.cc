@@ -22,11 +22,11 @@ void attitudeMessageHandler(const mg_msgs::Attitude2D msg) {
     gpsSolution.el = elAngle;
     gpsSolution.az = azAngle;
 
-    // Copy the covariance
     // Only have covariance information for pitch and yaw
-    for(int i = 0; i < 4; i++) {
-        gpsSolution.attCov[i] = P[i];
-    }
+    // Roll is assumed to be zero; 15 degree variance to account for uncertainty
+    gpsSolution.attCov[0] = rollVar;
+    gpsSolution.attCov[4] = elSigma * elSigma;
+    gpsSolution.attCov[8] = azSigma * azSigma;
 }
 
 void positionMessageHandler(const mg_msgs::SingleBaselineRTK msg) {
