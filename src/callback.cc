@@ -24,14 +24,13 @@ void saveImage(const cv::Mat& img, const std::string saveDirectory) {
     struct timeval tp;
     gettimeofday(&tp, NULL);
     long long timeNow = tp.tv_sec * 1000 + tp.tv_usec / 1000;
-    std::cout << "FPS: " << 1000.0 / (timeNow - timeLast) << std::endl;
     timeLast = timeNow;
 
     /* Calculate camera pose */
     const Eigen::Vector3d cameraAtt(0, gpsSolution.el - M_PI/6, gpsSolution.az);
-    const Eigen::Vector3d rpRG(gpsSolution.x, gpsSolution.y, gpsSolution.z);
+    const Eigen::Vector3d rpG(gpsSolution.x, gpsSolution.y, gpsSolution.z);
     const Eigen::Vector3d cameraPos = transformBodyToECEF(
-        rpRG, 
+        rpG, 
         Eigen::Vector3d(0,0,0), 
         sensorParams.rcB,
         cameraAtt(0),
@@ -63,5 +62,4 @@ void saveImage(const cv::Mat& img, const std::string saveDirectory) {
     std::ofstream savefile(fullPath.c_str(), std::ios::out | std::ios::binary);
     savefile.write((const char*)&buff[0], buff.size());
     savefile.close();
-
 }

@@ -144,7 +144,7 @@ Eigen::Vector3d transformBodyToENU(
 
 
 Eigen::Vector3d transformBodyToECEF(
-    const Eigen::Vector3d& rIRG,        // Position of inertial origin with respect to reference in ECEF frame
+    const Eigen::Vector3d& rBG,        // Position of body origin with respect to ECEF origin in ECEF frame
     const Eigen::Vector3d& rBI,         // Position of body origin with respect to inertial in inertial frame 
     const Eigen::Vector3d& rB,          // Vector with respect to body origin in body frame
     const double roll,                  // 3-2-1 Euler rotation x-axis
@@ -156,7 +156,7 @@ Eigen::Vector3d transformBodyToECEF(
         const Eigen::Vector3d rcI = transformBodyToENU(rBI, rB, roll, pitch, yaw);
 
         // Convert ENU to ECEF
-        const Eigen::Vector3d rcG = transformENUToECEF(rIRG + sensorParams.rrG, rcI);
+        const Eigen::Vector3d rcG = transformENUToECEF(rBG, rcI);
 
         return rcG;
 }
