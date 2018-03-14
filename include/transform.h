@@ -94,17 +94,17 @@ Eigen::Matrix3d rotationMatrix(
 // Composes a direction cosine matrix that transforms a vector expressed in frame A to the same vector expressed in frame B
 // 3-2-1 euler rotation. Angles are B rotated away from A
 // Initially, frames A and B are aligned (old frame is initally frame A)
-// Rotate away from old frame around z axis by yaw
-// Rotate away from old frame around y axis by pitch
-// Rotate away from old frame around x axis by roll
+// Rotate away from old frame around z axis by zRotation
+// Rotate away from old frame around y axis by yRotation
+// Rotate away from old frame around x axis by xRotation
 Eigen::Matrix3d eulerToDCM(
-    const double roll,
-    const double pitch,
-    const double yaw 
+    const double xRotation,
+    const double yRotation,
+    const double zRotation 
     ) {
-        Eigen::Matrix3d Rx = rotationMatrix(Eigen::Vector3d(1,0,0), roll);
-        Eigen::Matrix3d Ry = rotationMatrix(Eigen::Vector3d(0,1,0), pitch);
-        Eigen::Matrix3d Rz = rotationMatrix(Eigen::Vector3d(0,0,1), yaw);
+        Eigen::Matrix3d Rx = rotationMatrix(Eigen::Vector3d(1,0,0), xRotation);
+        Eigen::Matrix3d Ry = rotationMatrix(Eigen::Vector3d(0,1,0), yRotation);
+        Eigen::Matrix3d Rz = rotationMatrix(Eigen::Vector3d(0,0,1), zRotation);
     
         // Must transpose. If frame B is rotated away from frame A by a rotation R,
         // to rotate a vector expressed in frame A to a vector expressed in
@@ -114,47 +114,47 @@ Eigen::Matrix3d eulerToDCM(
 
 // 3-2-1 euler rotation
 // Initially, body and inertial frame are aligned (old frame is initally inertial)
-// Rotate body away from old frame around z axis by yaw
-// Rotate body away from old frame around y axis by pitch
-// Rotate body away from old frame around x axis by roll
+// Rotate body away from old frame around z axis by zRotation
+// Rotate body away from old frame around y axis by yRotation
+// Rotate body away from old frame around x axis by xRotation
 Eigen::Vector3d rotateBodyToENU(
     const Eigen::Vector3d& rB,
-    const double roll,
-    const double pitch,
-    const double yaw
+    const double xRotation,
+    const double yRotation,
+    const double zRotation
     ) {
-        // Negate angles since going from Body -> ENU but angles are ENU -> Body
-        return eulerToDCM(-roll, -pitch, -yaw) * rB; 
+        // Transpose since the DCM will take a vector from ENU -> body, but we want body -> ENU
+        return eulerToDCM(xRotation, yRotation, zRotation).transpose() * rB; 
 }
 
 // 3-2-1 euler rotation
 // Initially, body and inertial frame are aligned (old frame is initally inertial)
-// Rotate body away from old frame around z axis by yaw
-// Rotate body away from old frame around y axis by pitch
-// Rotate body away from old frame around x axis by roll
+// Rotate body away from old frame around z axis by zRotation
+// Rotate body away from old frame around y axis by yRotation
+// Rotate body away from old frame around x axis by xRotation
 Eigen::Vector3d transformBodyToENU(
     const Eigen::Vector3d& rBI,         // Position of body origin with respect to inertial origin expressed in inertial frame
     const Eigen::Vector3d& rB,          // Vector from body origin in body frame
-    const double roll,                  
-    const double pitch,                 
-    const double yaw                    
+    const double xRotation,                  
+    const double yRotation,                 
+    const double zRotation                    
     ) {
 
-    return rBI + rotateBodyToENU(rB, roll, pitch, yaw);
+    return rBI + rotateBodyToENU(rB, xRotation, yRotation, zRotation);
 }
 
-
+// xRotation, yRotation, zRotation are 3-2-1 rotation of body away from ENU
 Eigen::Vector3d transformBodyToECEF(
     const Eigen::Vector3d& rBG,        // Position of body origin with respect to ECEF origin in ECEF frame
     const Eigen::Vector3d& rBI,         // Position of body origin with respect to inertial in inertial frame 
     const Eigen::Vector3d& rB,          // Vector with respect to body origin in body frame
-    const double roll,                  // 3-2-1 Euler rotation x-axis
-    const double pitch,                 // 3-2-1 Euler rotation y-axis
-    const double yaw                    // 3-2-1 Euler rotation z-axis
+    const double xRotation,                  // 3-2-1 Euler rotation x-axis
+    const double yRotation,                 // 3-2-1 Euler rotation y-axis
+    const double zRotation                    // 3-2-1 Euler rotation z-axis
     ) {
 
         // Convert body coordinate to ENU
-        const Eigen::Vector3d rcI = transformBodyToENU(rBI, rB, roll, pitch, yaw);
+        const Eigen::Vector3d rcI = transformBodyToENU(rBI, rB, xRotation, yRotation, zRotation);
 
         // Convert ENU to ECEF
         const Eigen::Vector3d rcG = transformENUToECEF(rBG, rcI);

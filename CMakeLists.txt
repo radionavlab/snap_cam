@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(snap_cam)
 set(TARGET snap_cam_exec)
-set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_BUILD_TYPE Release)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -Wno-format-security -Wno-literal-suffix")
 
