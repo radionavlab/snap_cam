@@ -48,15 +48,17 @@ void saveImage(const cv::Mat& img, const std::string saveDirectory) {
     // Same as quad att just with a 30 degree pitch down
     // Add pi/6 since pitching 'down' is actually a positive roll around the y axis
     const Eigen::Vector3d cameraAtt = quadAtt + Eigen::Vector3d(0, M_PI/6, 0);
+    const Eigen::Vector4d cameraQuat = composeECEFQuat(rpG, cameraAtt(0), cameraAtt(1), cameraAtt(2));
 
     /* Write camera pose to file */
     std::string data = "" + 
         std::to_string(cameraPos(0)) + " " + 
         std::to_string(cameraPos(1)) + " " + 
         std::to_string(cameraPos(2)) + " " + 
-        std::to_string(cameraAtt(0)) + " " + 
-        std::to_string(cameraAtt(1)) + " " + 
-        std::to_string(cameraAtt(2));
+        std::to_string(cameraQuat(0)) + " " + 
+        std::to_string(cameraQuat(1)) + " " + 
+        std::to_string(cameraQuat(2)) + " " + 
+        std::to_string(cameraQuat(3));
 
     std::string command = "echo '" + filename + " " + data + "' >> " + saveDirectory + "/image_poses.txt";
     std::system(command.c_str());
