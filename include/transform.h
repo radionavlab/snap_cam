@@ -220,6 +220,17 @@ Eigen::Vector4d composeECEFQuat(
         const Eigen::Quaterniond q1(DCM_ECEF2ENU(rIG));
         const Eigen::Quaterniond q2(eulerToDCM(xRotation, yRotation, zRotation));
         const Eigen::Quaterniond q = (q2 * q1).inverse().normalized();
+        const Eigen::Matrix3d R1 = q.toRotationMatrix();
+
+        const Eigen::Vector3d x = transformBodyToECEF(rIG, Eigen::Vector3d(0,0,0), Eigen::Vector3d(1,0,0), xRotation, yRotation, zRotation) - rIG;
+        const Eigen::Vector3d y = transformBodyToECEF(rIG, Eigen::Vector3d(0,0,0), Eigen::Vector3d(0,1,0), xRotation, yRotation, zRotation) - rIG;
+        const Eigen::Vector3d z = transformBodyToECEF(rIG, Eigen::Vector3d(0,0,0), Eigen::Vector3d(0,0,1), xRotation, yRotation, zRotation) - rIG;
+        const Eigen::Matrix3d R2 = (Eigen::Matrix3d() << x, y, z).finished();
+
+        std::cout << "R1" << std::endl;
+        std::cout << R1 << std::endl;
+        std::cout << "R2" << std::endl;
+        std::cout << R2 << std::endl;
 
         return Eigen::Vector4d(q.w(), q.x(), q.y(), q.z());
 }
