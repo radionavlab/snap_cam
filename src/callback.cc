@@ -14,6 +14,14 @@
 void saveImage(const cv::Mat& img, const std::string saveDirectory) {
     /* Setup */
     static int seq = 0;
+
+    // Write file header
+    if(seq == 0) {
+        std::string command = "echo '# IMAGENAME X Y Z POSCOV EL AZ ELSIGMA AZSIGMA ATTCOV' >> " + saveDirectory + "/image_data_raw.txt";
+        std::system(command.c_str());
+    }
+
+    // Compose image name
     std::stringstream ss;
     ss << std::setw(5) << std::setfill('0') << seq++;
     std::string filename = "frame" + ss.str() + ".jpg";
@@ -27,33 +35,30 @@ void saveImage(const cv::Mat& img, const std::string saveDirectory) {
     timeLast = timeNow;
 
     /* Write camera pose to file */
-    std::string data = "";
-    {   // Scoping block
-        std::string command = "echo '# IMAGENAME X Y Z POSCOV EL AZ ELSIGMA AZSIGMA ATTCOV' >> " + saveDirectory + "/image_data_raw.txt";
-        std::system(command.c_str());
-    }
+    std::ostringstream data;
+    data << std::fixed << std::setprecision(10);
     
     // Write camera position
-    data = data + " " + std::to_string(gpsSolution.x);
-    data = data + " " + std::to_string(gpsSolution.y);
-    data = data + " " + std::to_string(gpsSolution.z);
+    data << " " << gpsSolution.x;
+    data << " " << gpsSolution.y;
+    data << " " << gpsSolution.z;
 
     for(int i=0; i < 6; i++) {
-        data = data + " " + std::to_string(gpsSolution.posCov[i]);
+        data << " " << gpsSolution.posCov[i];
     }
 
     // Write camera orientation
-    data = data + " " + std::to_string(gpsSolution.el);
-    data = data + " " + std::to_string(gpsSolution.az);
+    data << " " << gpsSolution.el;
+    data << " " << gpsSolution.az;
 
-    data = data + " " + std::to_string(gpsSolution.elSigma);
-    data = data + " " + std::to_string(gpsSolution.azSigma);
+    data << " " << gpsSolution.elSigma;
+    data << " " << gpsSolution.azSigma;
  
     for(int i=0; i < 6; i++) {
-        data = data + " " + std::to_string(gpsSolution.attCov[i]);
+        data << " " << gpsSolution.attCov[i];
     }
 
-    std::string command = "echo '" + filename + data + "' >> " + saveDirectory + "/image_data_raw.txt";
+    std::string command = "echo '" + filename + data.str() + "' >> " + saveDirectory + "/image_data_raw.txt";
     std::system(command.c_str());
     
     /* Saving image */
