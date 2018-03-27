@@ -13,7 +13,7 @@ void attitudeMessageHandler(const mg_msgs::Attitude2D msg) {
     const uint32_t nCov = msg.nCov;
     const double azAngle = msg.azAngle;
     const double elAngle = msg.elAngle;
-    const double azSigma = msg.azAngle;
+    const double azSigma = msg.azSigma;
     const double elSigma = msg.elSigma;
     const double testStat = msg.testStat;
     const uint8_t numDD = msg.numDD;
