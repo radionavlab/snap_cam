@@ -34,10 +34,10 @@
     <param name="gain" value="50"/>
 
     <!-- attitude_topic: Name of the topic publishing attitude data for this quad -->
-    <param name="attitude_topic" value="/phoenix/Attitude2D"/>
+    <param name="attitude_topic" value="/gryphon/Attitude2D"/>
 
     <!-- position_topic: Name of the topic publishing position data for this quad -->
-    <param name="position_topic" value="/phoenix/SingleBaselineRTK"/>
+    <param name="position_topic" value="/gryphon/SingleBaselineRTK"/>
 
     <!-- Sensor Params. Defined in sensorParams.h -->
     <rosparam param="rcB">[0.0, 0.0146, -0.0907]</rosparam>
