@@ -5,29 +5,26 @@ set(CMAKE_BUILD_TYPE Release)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS} -Wno-format-security -Wno-literal-suffix")
 
-find_package(OpenCV REQUIRED)
-
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  geometry_msgs
-  mavlink
-  mg_msgs
+  sensor_msgs
+  image_transport
+  cv_bridge
 )
+
+find_package(OpenCV REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES snap_cam
-  CATKIN_DEPENDS mg_msgs
-  DEPENDS yaml-cpp
 )
 
 include_directories(
 	include
 	${catkin_INCLUDE_DIRS}
-	${OpenCV_INCLUDE_DIRS}
-	# src # for mavlink
+        ${OpenCV_INCLUDE_DIRS}
 	./libcamera/inc
 	./libcamera/src
 )
@@ -43,13 +40,8 @@ add_library(snap_cam
   src/snapcam.cc
 )
 
-target_link_libraries(snap_cam
-  ${OpenCV_LIBS}
-  ${CAMERA_LIBS}
-)
+target_link_libraries(snap_cam ${CAMERA_LIBS})
 
 # add the ROS executables
-add_executable(${TARGET} src/main.cc src/callback.cc src/GPS.cc)
-target_link_libraries(${TARGET} yaml-cpp ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
-
-add_dependencies(${TARGET} mg_msgs_gencpp)
+add_executable(${TARGET} src/main.cc src/node.cc)
+target_link_libraries(${TARGET} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} snap_cam)

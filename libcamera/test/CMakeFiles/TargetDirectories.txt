@@ -1,3 +1,0 @@
-/home/linaro/catkin_ws/src/snap_cam/libcamera/test/CMakeFiles/edit_cache.dir
-/home/linaro/catkin_ws/src/snap_cam/libcamera/test/CMakeFiles/rebuild_cache.dir
-/home/linaro/catkin_ws/src/snap_cam/libcamera/test/CMakeFiles/cam_test.dir

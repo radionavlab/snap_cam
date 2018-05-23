@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<launch>
+
+  <node pkg="snap_cam" type="snap_cam_exec" name="down_camera" output="screen">
+
+    <!-- REQUIRED FOR THE DOWN CAMERA. DO NOT CHANGE -->
+
+    <!-- forward, down -->
+    <param name="camera" value="down"/>
+
+    <!-- yuv420sp, yuv420p, nv12-venus, bayer-rggb -->
+    <param name="preview_format" value="bayer-rggb"/>
+
+    <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
+    <param name="camera_resolution" value="VGA"/>
+
+
+
+    <!-- DEFAULTS FOR THE FORWARD CAMERA -->
+
+    <!-- auto, ISO_HJR, ISO100, ISO200, ISO400, ISO800, ISO1600, ISO3200 -->
+    <param name="iso" value="auto"/>
+
+
+ 
+    <!-- CAN BE TINKERED WITH BUT ARE BEST LEFT ALONE -->
+
+    <!-- auto, infinity, macro, continuous-video, continuous-picture, manual -->
+    <param name="focus_mode" value="continuous-video"/>
+
+    <!-- auto, incandescent, fluorescent, warm-fluorescent, daylight, cloudy-daylight, twilight, shade, manual-cct -->
+    <param name="white_balance" value="auto"/>
+
+    <!-- brightness: integer beween 1-6-->
+    <param name="brightness" value="3"/>
+
+    <!-- sharpness: integer between 0-36 in increments of 6-->
+    <param name="sharpness" value="18"/>
+
+    <!-- contrast: integer between 0-10 -->
+    <param name="contrast" value="5"/>
+
+    </node>
+</launch>

@@ -37,9 +37,7 @@
 
 #include "snapcam.h"
 #include <iostream>
-
-using namespace std;
-using namespace camera;
+#include <thread>
 
 SnapCam::SnapCam(CamConfig cfg)
 {
@@ -49,18 +47,17 @@ SnapCam::SnapCam(CamConfig cfg)
 
 int SnapCam::initialize(CamConfig cfg)
 {
-    int PROBLEM_EXIT = -1;
 
     // Ensure camera is connected and accessible
-    if (getNumberOfCameras() < 1) {
+    if (camera::getNumberOfCameras() < 1) {
         printf("No cameras detected. Are you using sudo?\n");
-        return PROBLEM_EXIT;
+        return EXIT_FAILURE;
     }
 
     // Create camera device
-    if(ICameraDevice::createInstance(cfg.cameraId, &camera_) != 0) {
+    if(camera::ICameraDevice::createInstance(cfg.cameraId, &camera_) != 0) {
         printf("Could not open camera.");
-        return PROBLEM_EXIT;
+        return EXIT_FAILURE;
     }
 
     // Add listener
@@ -69,11 +66,11 @@ int SnapCam::initialize(CamConfig cfg)
     // Initialize camera device
     if(params_.init(camera_) != 0) {
         printf("failed to init parameters\n");
-        ICameraDevice::deleteInstance(&camera_);
-        return PROBLEM_EXIT;
+        camera::ICameraDevice::deleteInstance(&camera_);
+        return EXIT_FAILURE;
     }
 
-    if(cfg.func == CAM_FUNC_HIRES) {
+    if(cfg.func == CAM_FORWARD) {
         // Set the image sizes
         params_.setPreviewSize(cfg.previewSize); 
         params_.setVideoSize(cfg.previewSize); 
@@ -94,7 +91,7 @@ int SnapCam::initialize(CamConfig cfg)
         params_.setContrast(cfg.contrast);
     }
 
-    if(cfg.func == CAM_FUNC_OPTIC_FLOW) {
+    if(cfg.func == CAM_DOWN) {
         // Set the image sizes
         params_.setPreviewSize(cfg.previewSize); 
         params_.setVideoSize(cfg.previewSize); 
@@ -119,7 +116,7 @@ int SnapCam::initialize(CamConfig cfg)
 
     if (params_.commit() != 0) {
         printf("Commit failed\n");
-        return PROBLEM_EXIT;
+        return EXIT_FAILURE;
     }
 
 
@@ -152,7 +149,7 @@ SnapCam::~SnapCam()
     camera_->stopPreview();
 
     /* release camera device */
-    ICameraDevice::deleteInstance(&camera_);
+    camera::ICameraDevice::deleteInstance(&camera_);
 }
 
 void SnapCam::onError() 
@@ -161,14 +158,14 @@ void SnapCam::onError()
     exit(EXIT_FAILURE);
 }
 
-void SnapCam::onPreviewFrame(ICameraFrame *frame) {
-    if (!cb_ || config_.func != CAM_FUNC_OPTIC_FLOW) { return; }
+void SnapCam::onPreviewFrame(camera::ICameraFrame *frame) {
+    if (!cb_ || config_.func != CAM_DOWN) { return; }
     frame->acquireRef();
     std::thread(cb_, frame).detach();
 }
 
-void SnapCam::onVideoFrame(ICameraFrame *frame) {
-    if (!cb_ || config_.func != CAM_FUNC_HIRES) { return; }
+void SnapCam::onVideoFrame(camera::ICameraFrame *frame) {
+    if (!cb_ || config_.func != CAM_FORWARD) { return; }
     frame->acquireRef();
     std::thread(cb_, frame).detach();
 }
