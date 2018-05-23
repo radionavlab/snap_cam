@@ -58,6 +58,7 @@ public:
 
 	void setListener(CallbackFunction fun);  // register a function callback
         void start();
+        int cameraType();
 
         void updateGain(int gain);
         void updateExposure(int exposure);

@@ -160,17 +160,19 @@ void SnapCam::onError()
 
 void SnapCam::onPreviewFrame(camera::ICameraFrame *frame) {
     if (!cb_ || config_.func != CAM_DOWN) { return; }
-    frame->acquireRef();
-    std::thread(cb_, frame).detach();
+    cb_(frame);
 }
 
 void SnapCam::onVideoFrame(camera::ICameraFrame *frame) {
     if (!cb_ || config_.func != CAM_FORWARD) { return; }
-    frame->acquireRef();
-    std::thread(cb_, frame).detach();
+    cb_(frame);
 }
 
 void SnapCam::setListener(CallbackFunction fun)
 {
     cb_ = fun;
+}
+
+int SnapCam::cameraType() {
+    return config_.func;
 }

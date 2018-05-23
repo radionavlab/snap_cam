@@ -1,16 +1,15 @@
 #include "node.h"
 #include <iostream>
+#include <chrono>
 
 Node::Node(int argc, char** argv) {
-    ros::init(argc, argv, "camera");
+    ros::init(argc, argv, "~");
     this->nh_ = std::make_shared<ros::NodeHandle>("~");
+    this->it_ = std::make_shared<image_transport::ImageTransport>(*(this->nh_));
+    this->it_pub_ = this->it_->advertise("frame", 1);
 
     const CamConfig cfg = this->LoadCameraConfig();
     this->camera_ = std::make_shared<SnapCam>(cfg);
-
-    this->it_ = std::make_shared<image_transport::ImageTransport>(*this->nh_);
-   *(this->it_pub_) = this->it_->advertise("camera/image", 1);
-
 }
 
 void Node::Start() {
@@ -25,7 +24,6 @@ void Node::Start() {
 }
 
 void Node::FrameHandler(camera::ICameraFrame *frame) {
-
     // Check that an image is not already being processed
     if(this->is_busy_ == true) {
         std::cout << "busy" << std::endl;
@@ -34,19 +32,44 @@ void Node::FrameHandler(camera::ICameraFrame *frame) {
         this->is_busy_ = true;
     }
 
-    std::cout << this->image_width_ << ", " << this->image_height_ << std::endl;
+    { // Print FPS
+        static long long last_time = 0;
+        std::chrono::milliseconds now = std::chrono::duration_cast< std::chrono::milliseconds >(
+            std::chrono::system_clock::now().time_since_epoch()
+        );
 
-    // // Convert YUV to RGB
-    // cv::Mat img = cv::Mat(1.5 * this->image_height_, this->image_width_, CV_8UC1, frame->data);
-    // cv::cvtColor(img, img, CV_YUV420sp2RGB);
-    // sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
+        std::cout << 1000.0/(now.count() - last_time) << " fps" << std::endl;
+        last_time = now.count();
+    }
 
-    // // Publish the image
-    // this->it_pub_->publish(msg);
+    if(this->camera_->cameraType() == CAM_FORWARD) {
+        // Convert YUV to RGB
+        cv::Mat img = cv::Mat(1.5 * this->image_height_, this->image_width_, CV_8UC1, frame->data);
+        cv::cvtColor(img, img, CV_YUV420sp2RGB);
+        sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
+        this->it_pub_.publish(msg);
+    } else if(this->camera_->cameraType() == CAM_DOWN) {
+        // cv::Mat img = cv::Mat(this->image_height_, this->image_width_, CV_8UC1, frame->data);
+        // sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", img).toImageMsg();
+        // this->it_pub_.publish(msg);
+
+        std::cout << this->image_width_ << ", " << this->image_height_ << std::endl;
+        sensor_msgs::Image msg;
+        msg.header       = std_msgs::Header();
+        msg.height       = this->image_height_;
+        msg.width        = this->image_width_;
+        msg.encoding     = "mono8";
+        msg.is_bigendian = true;
+        msg.step         = this->image_width_;
+        msg.data         = std::vector<uint8_t>(frame->data, frame->data + this->image_height_ * this->image_width_);
+        this->it_pub_.publish(msg);
+
+    }
+
 
     // Finished processing
-    std::cout << "not busy" << std::endl;
     this->is_busy_ = false;
+    
 }
 
 CamConfig Node::LoadCameraConfig() {

@@ -19,12 +19,12 @@ public:
 private:
     CamConfig LoadCameraConfig();
 
-    std::shared_ptr<image_transport::ImageTransport> it_;
-    image_transport::Publisher* it_pub_;
-
     std::shared_ptr<ros::NodeHandle> nh_;
-    std::atomic<bool> is_busy_{false};
+    std::shared_ptr<image_transport::ImageTransport> it_;
     std::shared_ptr<SnapCam> camera_;
+    image_transport::Publisher it_pub_;
+
+    std::atomic<bool> is_busy_{false};
     int image_width_;
     int image_height_;
 
