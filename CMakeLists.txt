@@ -11,10 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   sensor_msgs
   image_transport
-  cv_bridge
 )
-
-find_package(OpenCV REQUIRED)
 
 catkin_package(
   INCLUDE_DIRS include
@@ -24,7 +21,6 @@ catkin_package(
 include_directories(
 	include
 	${catkin_INCLUDE_DIRS}
-        ${OpenCV_INCLUDE_DIRS}
 	./libcamera/inc
 	./libcamera/src
 )
@@ -44,4 +40,4 @@ target_link_libraries(snap_cam ${CAMERA_LIBS})
 
 # add the ROS executables
 add_executable(${TARGET} src/main.cc src/node.cc)
-target_link_libraries(${TARGET} ${catkin_LIBRARIES} ${OpenCV_LIBRARIES} snap_cam)
+target_link_libraries(${TARGET} ${catkin_LIBRARIES} snap_cam)

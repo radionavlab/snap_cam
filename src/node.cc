@@ -1,6 +1,7 @@
 #include "node.h"
 #include <iostream>
 #include <chrono>
+#include <sensor_msgs/Image.h>
 
 Node::Node(int argc, char** argv) {
     ros::init(argc, argv, "~");
@@ -43,27 +44,60 @@ void Node::FrameHandler(camera::ICameraFrame *frame) {
     }
 
     if(this->camera_->cameraType() == CAM_FORWARD) {
-        // Convert YUV to RGB
-        cv::Mat img = cv::Mat(1.5 * this->image_height_, this->image_width_, CV_8UC1, frame->data);
-        cv::cvtColor(img, img, CV_YUV420sp2RGB);
-        sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
-        this->it_pub_.publish(msg);
+        // // Convert YUV to RGB
+        // cv::Mat img = cv::Mat(1.5 * this->image_height_, this->image_width_, CV_8UC1, frame->data);
+        // cv::cvtColor(img, img, CV_YUV420sp2RGB);
+        // sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
+        // this->it_pub_.publish(msg);
+
+        // Convert YUV420 to YUV422
+        // https://github.com/ATLFlight/snap_cam_ros/blob/master/src/snap_cam.cpp
+        // Adopted and changed from above link
+        // Avoiding the OpenCV conversion above to minimize data copies
+        // Removed the CV Libraries from CMakeLists. Will have to put them back in to use opencv.
+        sensor_msgs::Image::Ptr image(new sensor_msgs::Image());
+        const uint32_t w = this->image_width_;
+        const uint32_t h = this->image_height_;
+
+        image->width = w;
+        image->height = h;
+
+        const uint32_t image_size_pix = w * h;
+        const uint32_t u_offset = image_size_pix;
+        image->data.resize(image_size_pix * 2);
+        for(size_t i = 0; i * 2 < image_size_pix; i++) {
+            const uint32_t row = (i * 2) / w; // full res row
+            const uint32_t col = (i * 2) % w; // full res row
+            const uint32_t rc_ind = ((row / 2) * (w / 2)) + (col / 2); // half res ind
+            const uint32_t u_ind = u_offset + (rc_ind * 2) + 1;
+            const uint32_t v_ind = u_offset + (rc_ind * 2);
+
+            // VYUY?
+            image->data[(i*4)+0] = frame->data[v_ind];
+            image->data[(i*4)+1] = frame->data[i*2]; // Y1
+            image->data[(i*4)+2] = frame->data[u_ind];
+            image->data[(i*4)+3] = frame->data[(i*2) + 1]; // Y2
+        }
+
+        image->encoding = std::string("yuv422");
+        image->step = w * 2;
+
+        this->it_pub_.publish(image);
     } else if(this->camera_->cameraType() == CAM_DOWN) {
         // cv::Mat img = cv::Mat(this->image_height_, this->image_width_, CV_8UC1, frame->data);
         // sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", img).toImageMsg();
         // this->it_pub_.publish(msg);
 
-        std::cout << this->image_width_ << ", " << this->image_height_ << std::endl;
-        sensor_msgs::Image msg;
-        msg.header       = std_msgs::Header();
-        msg.height       = this->image_height_;
-        msg.width        = this->image_width_;
-        msg.encoding     = "mono8";
-        msg.is_bigendian = true;
-        msg.step         = this->image_width_;
-        msg.data         = std::vector<uint8_t>(frame->data, frame->data + this->image_height_ * this->image_width_);
-        this->it_pub_.publish(msg);
-
+        // sensor_msgs::Image msg;
+        // msg.header       = std_msgs::Header();
+        // msg.height       = this->image_height_;
+        // msg.width        = this->image_width_;
+        // msg.encoding     = "mono8";
+        // msg.is_bigendian = true;
+        // msg.step         = this->image_width_;
+        // msg.data         = std::vector<uint8_t>(frame->data, frame->data + this->image_height_ * msg.step);
+        // this->it_pub_.publish(msg);
+        std::cout << "This feature not yet implemented! Images can stream, but the bytes are out of order. Please fix this in node.cc!" << std::endl;
     }
 
 
