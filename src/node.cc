@@ -40,8 +40,11 @@ void Node::FrameHandler(camera::ICameraFrame *frame) {
     { // Print FPS
         static long long last_time = 0;
         long long now = CurrentTimeMillis();
-        std::cout << 1000.0/(now - last_time) << " fps" << std::endl;
-        last_time = now;
+        if(now - last_time < 1000.0/15.0) { this->is_busy_ = false; return; }
+        else {
+            std::cout << 1000.0/(now - last_time) << " fps" << std::endl;
+            last_time = now;
+        }
     }
 
     if(this->camera_->cameraType() == CAM_FORWARD) {
