@@ -1,6 +1,6 @@
 #include "node.h"
+#include "utils.h"
 #include <iostream>
-#include <chrono>
 #include <sensor_msgs/Image.h>
 
 Node::Node(int argc, char** argv) {
@@ -25,9 +25,13 @@ void Node::Start() {
 }
 
 void Node::FrameHandler(camera::ICameraFrame *frame) {
+    // {
+    //     static int counter = 0;
+    //     if(counter++ > 0) return;
+    // }
+
     // Check that an image is not already being processed
     if(this->is_busy_ == true) {
-        std::cout << "busy" << std::endl;
         return;
     } else {
         this->is_busy_ = true;
@@ -35,16 +39,13 @@ void Node::FrameHandler(camera::ICameraFrame *frame) {
 
     { // Print FPS
         static long long last_time = 0;
-        std::chrono::milliseconds now = std::chrono::duration_cast< std::chrono::milliseconds >(
-            std::chrono::system_clock::now().time_since_epoch()
-        );
-
-        std::cout << 1000.0/(now.count() - last_time) << " fps" << std::endl;
-        last_time = now.count();
+        long long now = CurrentTimeMillis();
+        std::cout << 1000.0/(now - last_time) << " fps" << std::endl;
+        last_time = now;
     }
 
     if(this->camera_->cameraType() == CAM_FORWARD) {
-        // // Convert YUV to RGB
+        // Convert YUV to RGB
         // cv::Mat img = cv::Mat(1.5 * this->image_height_, this->image_width_, CV_8UC1, frame->data);
         // cv::cvtColor(img, img, CV_YUV420sp2RGB);
         // sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "bgr8", img).toImageMsg();
