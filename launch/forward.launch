@@ -19,7 +19,7 @@
     <param name="iso" value="auto"/>
 
     <!-- resolution: QVGA, VGA, 720p, 1080p, 4k -->
-    <param name="camera_resolution" value="VGA"/>
+    <param name="camera_resolution" value="4k"/>
 
 
  
