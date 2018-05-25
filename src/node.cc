@@ -1,8 +1,15 @@
 #include "node.h"
 #include "utils.h"
+#include "socket_io.h"
 #include <iostream>
 #include <sensor_msgs/Image.h>
 #include <opencv2/opencv.hpp>
+#include <unistd.h>
+#include <thread>
+
+#include <sys/mman.h>
+#include <sys/stat.h>        /* For mode constants */
+#include <fcntl.h>  
 
 Node::Node(int argc, char** argv) {
     ros::init(argc, argv, "~");
@@ -26,10 +33,60 @@ void Node::Start() {
 }
 
 void Node::FrameHandler(camera::ICameraFrame *frame) {
-    // {
-    //     static int counter = 0;
-    //     if(counter++ > 0) return;
-    // }
+    {
+        static int counter = 0;
+        if(counter++ > 0) return;
+    }
+
+    {
+        std::cout << getpid() << std::endl;
+        std::cout << frame->fd << std::endl;
+        std::cout << frame->size << std::endl;
+        for(size_t i = 0; i < 25; i++) {
+            std::cout << (int) frame->data[i] << " ";
+        }
+        std::cout << std::endl;
+
+        const char* path = "/tmp/server";
+          
+        SocketInfo si = WaitForClinet(path);
+        TicToc();
+        SendFD(si.client_fd, frame->fd);
+        TicToc();
+
+        while(true)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+    }
+//     {
+//         std::cout << getpid() << std::endl;
+//         std::cout << frame->fd << std::endl;
+//         std::cout << frame->size << std::endl;
+// 
+//         TicToc();
+//         int fd = shm_open("/tucker-mem", O_CREAT | O_RDWR, 0777);
+//         if(fd < 0) { HandleError("SHM_OPEN"); }
+// 
+//         int ret = ftruncate(fd, frame->size);
+//         if(ret < 0) { HandleError("FTRUNCATE"); }
+// 
+//         void* rptr = mmap(NULL, frame->size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+//         if (rptr == MAP_FAILED) { HandleError("MAP FAILED"); }
+// 
+//         memcpy(rptr, frame->data, frame->size);
+//         TicToc();
+// 
+//         for(size_t i = 0; i < 10; i++) {
+//             std::cout << (int) frame->data[i] << " ";
+//         }
+//         std::cout << std::endl;
+// 
+//         while(true)
+//         {
+//             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+//         }
+//     }
 
     // Check that an image is not already being processed
     if(this->is_busy_ == true) {

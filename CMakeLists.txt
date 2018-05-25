@@ -40,7 +40,7 @@ add_library(snap_cam
   src/snapcam.cc
 )
 
-target_link_libraries(snap_cam ${CAMERA_LIBS})
+target_link_libraries(snap_cam ${CAMERA_LIBS} rt)
 
 # add the ROS executables
 add_executable(${TARGET} src/main.cc src/node.cc)
