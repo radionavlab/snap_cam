@@ -11,8 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   rospy
   std_msgs
-  sensor_msgs
-  image_transport
+  # sensor_msgs
+  # image_transport
   # cv_bridge
 )
 
@@ -25,8 +25,6 @@ include_directories(
 	include
 	${catkin_INCLUDE_DIRS}
         ${OpenCV_INCLUDE_DIRS}
-	./libcamera/inc
-	./libcamera/src
 )
 
 find_library(CAMERA_LIBS NAMES camera PATHS /usr/lib)
@@ -37,11 +35,21 @@ endif()
 
 ## Declare a C++ library
 add_library(snap_cam
-  src/snapcam.cc
+    include/snapcam.h
+    src/snapcam.cc
 )
 
-target_link_libraries(snap_cam ${CAMERA_LIBS} rt)
+add_library(snap_cam_server
+    include/camera_server.h
+    src/camera_server.cc)
+
+add_library(snap_cam_client
+    include/camera_client.h
+    src/camera_client.cc)
+
+target_link_libraries(snap_cam ${CAMERA_LIBS})
 
 # add the ROS executables
-add_executable(${TARGET} src/main.cc src/node.cc src/camera_server.cc)
-target_link_libraries(${TARGET} ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam)
+add_executable(${TARGET} src/main.cc src/node.cc)
+target_link_libraries(${TARGET} ${catkin_LIBRARIES} ${OpenCV_LIBS} snap_cam snap_cam_server snap_cam_client)
+
