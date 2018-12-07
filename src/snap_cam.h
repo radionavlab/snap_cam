@@ -4,6 +4,7 @@
 #include <camera.h>
 #include <camera_parameters.h>
 #include <iostream>
+#include <atomic>
 
 // workaround to only have to define these once
 struct CameraSizes {
@@ -38,14 +39,13 @@ struct CamConfig {
 	int exposure;
 	int gain;
 	camera::ImageSize previewSize;
-	camera::ImageSize pictureSize;
   int func;
 };
 
 // Callback function.
 typedef std::function<void(camera::ICameraFrame *frame)> CallbackFunction;
 
-class SnapCam : camera::ICameraListener
+class SnapCam : public camera::ICameraListener
 {
 public:
   SnapCam();
@@ -70,5 +70,7 @@ private:
 	camera::CameraParams params_;
 	CamConfig config_;
 	CallbackFunction cb_;
+  std::atomic<bool> busy_{false};
+  std::atomic<bool> running_{false};
 };
 

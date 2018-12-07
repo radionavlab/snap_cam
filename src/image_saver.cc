@@ -4,6 +4,7 @@
 
 #include <iomanip>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -24,6 +25,16 @@ std::string ImageSaver::NextImageFileName() {
 }; 
 
 void ImageSaver::SaveImage(camera::ICameraFrame *frame) { 
+    // Calc and report FPS
+    static long long last_time_ms = 0;
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long long now_time_ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    double fps = 1000.0 / (now_time_ms - last_time_ms);
+    last_time_ms = now_time_ms;
+    std::cout << std::setw(10) << std::setprecision(3) << fps << " fps" << '\r' << std::flush;
+
+
     // Log metadata
     const std::string filename = this->NextImageFileName();
     this->metadata_logger_ptr_->LogMetadata(filename);

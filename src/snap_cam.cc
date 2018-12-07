@@ -1,14 +1,13 @@
 // Author: Tucker Haydon
 
 #include "snap_cam.h"
-#include "utils.h"
 
 #include <iostream>
 #include <thread>
 
 const CamConfig SnapCam::DEFAULT_CONFIG = {
   .cameraId       = 1,
-  .focusMode      = "continuous-video",
+  .focusMode      = "auto",
   .whiteBalance   = "auto",
   .ISO            = "ISO3200", 
   .previewFormat  = "yuv420sp",
@@ -18,11 +17,10 @@ const CamConfig SnapCam::DEFAULT_CONFIG = {
   .exposure       = 100,
   .gain           = 50, 
   .previewSize    = CameraSizes::UHDSize(), 
-  .pictureSize    = CameraSizes::UHDSize(),
   .func           = CAM_FORWARD,
 };
 
-SnapCam::SnapCam() : SnapCam(DEFAULT_CONFIG) {}
+SnapCam::SnapCam() : SnapCam(SnapCam::DEFAULT_CONFIG) {}
 
 SnapCam::SnapCam(const CamConfig& cfg) {
     cb_=nullptr;
@@ -86,37 +84,43 @@ void SnapCam::Initialize() {
 }
 
 void SnapCam::Start() {
-    // Start the camera preview and recording. Will start pushing frames asynchronously to the callbacks
+  if(!this->running_) {
     this->Initialize();
     camera_->startPreview();
     camera_->startRecording();
+    running_ = true;
+  }
 }
 
 void SnapCam::Stop() {
+  if(this->running_) {
     camera_->stopRecording();
     camera_->stopPreview();
-
-    /* release camera device */
     camera::ICameraDevice::deleteInstance(&camera_);
+    running_ = false;
+  }
 }
 
 SnapCam::~SnapCam() {
     this->Stop();
 }
 
-void SnapCam::onError() {
-    std::cout << "Camera error!, aborting\n" << std::endl;
-    exit(EXIT_FAILURE);
-}
-
 void SnapCam::onPreviewFrame(camera::ICameraFrame *frame) {
-    if (!cb_ || config_.func != CAM_DOWN) { return; }
-    cb_(frame);
+  if (!cb_ || config_.func != CAM_DOWN || this->busy_) { return; }
+  this->busy_ = true;
+  frame->acquireRef();
+  cb_(frame);
+  frame->releaseRef();
+  this->busy_ = false;
 }
 
 void SnapCam::onVideoFrame(camera::ICameraFrame *frame) {
-    if (!cb_ || config_.func != CAM_FORWARD) { return; }
+    if (!cb_ || config_.func != CAM_FORWARD || this->busy_) { return; }
+    this->busy_ = true;
+    frame->acquireRef();
     cb_(frame);
+    frame->releaseRef();
+    this->busy_ = false;
 }
 
 void SnapCam::SetListener(CallbackFunction fun) {
