@@ -19,11 +19,6 @@ class ImageSaver {
     */ 
     std::string NextImageFileName(); 
 
-    /*
-     * Make the directory where images are saved
-     */
-    void MakeSaveDirectory();
-
   public: 
     /*
      * Constructor.

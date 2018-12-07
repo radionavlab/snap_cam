@@ -13,7 +13,6 @@ MetadataLogger::MetadataLogger(const std::string& log_directory_path, const std:
   this->log_directory_path_ = log_directory_path;
   this->log_file_name_ = log_file_name;
   this->log_file_path_ = this->log_directory_path_ + "/" + this->log_file_name_;
-
   this->CreateLogFile();
 };
 
@@ -33,6 +32,10 @@ void MetadataLogger::CreateLogFile() {
 };
 
 void MetadataLogger::LogMetadata(const std::string& row_name) {
+  if(this->log_directory_path_ == "") {
+    return;
+  }
+
   // Copy most recent pose estimate
   nav_msgs::Odometry odom = odometry_buffer.GetOdometryMsg();
 
